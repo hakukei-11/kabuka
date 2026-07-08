@@ -3,14 +3,11 @@ import yfinance as yf
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# 別ファイルからティッカーを読み込み
 from tickers import JP_TICKERS, US_TICKERS
 
-# 画面のタイトル設定
 st.title("📊 日本株 + 米国株 25日移動平均線タッチ判定ツール")
 st.write("日本株と米国株の中から、今日の株価が25日移動平均線に近づいている銘柄を判定します。")
 
-# タッチ判定の許容範囲（例: 100% 以内）
 THRESHOLD = 100.0
 
 @st.cache_data(ttl=3600)
@@ -18,7 +15,6 @@ def check_touch_tickers():
     touched_list = []
     all_data = {}
 
-    # 日本株 + 米国株を統合
     ALL_TICKERS = {**JP_TICKERS, **US_TICKERS}
 
     for ticker, name in ALL_TICKERS.items():
@@ -26,16 +22,12 @@ def check_touch_tickers():
         if df.empty:
             continue
 
-        # 欠損値を前日値で補完（日本株は欠損が多いため）
         df['Close'] = df['Close'].fillna(method='ffill')
-
-        # 25日移動平均線
         df['25MA'] = df['Close'].rolling(window=25).mean()
 
         latest_close = df['Close'].iloc[-1]
         latest_ma = df['25MA'].iloc[-1]
 
-        # 25MA が NaN の場合は最新終値を代わりに使う（判定可能にする）
         if pd.isna(latest_ma):
             latest_ma = latest_close
 
@@ -54,11 +46,8 @@ def check_touch_tickers():
 
     return touched_list, all_data
 
-# 判定の実行
 with st.spinner("最新の株価データを取得中..."):
     touched_tickers, all_stock_data = check_touch_tickers()
-
-# --- 画面表示部分 ---
 
 st.header("🎯 本日のタッチ銘柄（±100%以内）")
 if touched_tickers:
