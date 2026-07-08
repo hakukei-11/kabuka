@@ -5,12 +5,14 @@ import matplotlib.pyplot as plt
 
 from tickers import JP_TICKERS, US_TICKERS
 
+# タイトル
 st.title("📊 日本株 + 米国株 25日移動平均線タッチ判定ツール")
 st.write("日本株と米国株の中から、今日の株価が25日移動平均線に近づいている銘柄を判定します。")
 
+# 許容範囲（例: ±100%）
 THRESHOLD = 100.0
 
-@st.cache_data(ttl=3600)
+# キャッシュを一時的に無効化して最新データを取得
 def check_touch_tickers():
     touched_list = []
     all_data = {}
@@ -18,23 +20,27 @@ def check_touch_tickers():
     ALL_TICKERS = {**JP_TICKERS, **US_TICKERS}
 
     for ticker, name in ALL_TICKERS.items():
-        df = yf.Ticker(ticker).history(period="6m")
+        # yfinance の download を使用（Ticker.history より安定）
+        df = yf.download(ticker, period="6mo", interval="1d")
         if df.empty:
+            st.write(f"⚠️ {ticker} のデータが取得できません。")
             continue
 
+        # 欠損補完と移動平均計算
         df['Close'] = df['Close'].fillna(method='ffill')
-        df['25MA'] = df['Close'].rolling(window=25).mean()
+        df['25MA'] = df['Close'].rolling(window=25, min_periods=1).mean()
 
         latest_close = df['Close'].iloc[-1]
         latest_ma = df['25MA'].iloc[-1]
 
+        # NaN の場合は最新終値を代替
         if pd.isna(latest_ma):
             latest_ma = latest_close
 
         deviation = ((latest_close - latest_ma) / latest_ma) * 100
-
         all_data[ticker] = df
 
+        # 判定
         if abs(deviation) <= THRESHOLD:
             touched_list.append({
                 "銘柄コード": ticker,
@@ -46,9 +52,11 @@ def check_touch_tickers():
 
     return touched_list, all_data
 
+
 with st.spinner("最新の株価データを取得中..."):
     touched_tickers, all_stock_data = check_touch_tickers()
 
+# --- 表示部分 ---
 st.header("🎯 本日のタッチ銘柄（±100%以内）")
 if touched_tickers:
     df_touched = pd.DataFrame(touched_tickers)
@@ -61,7 +69,6 @@ st.markdown("---")
 st.header("📈 個別チャート確認")
 
 ALL_TICKERS = {**JP_TICKERS, **US_TICKERS}
-
 selected_name = st.selectbox("チャートを見たい銘柄を選んでください：", list(ALL_TICKERS.values()))
 selected_ticker = [k for k, v in ALL_TICKERS.items() if v == selected_name][0]
 
