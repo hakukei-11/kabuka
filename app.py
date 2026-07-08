@@ -3,44 +3,60 @@ import yfinance as yf
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from tickers import JP_TICKERS, US_TICKERS
-
-# タイトル
-st.title("📊 日本株 + 米国株 25日移動平均線タッチ判定ツール")
+# 画面タイトル
+st.title("📊 株価 25日移動平均線タッチ判定ツール")
 st.write("日本株と米国株の中から、今日の株価が25日移動平均線に近づいている銘柄を判定します。")
 
-# 許容範囲（例: ±100%）
-THRESHOLD = 100.0
+# 判定対象銘柄（東証・米国株）
+TICKERS = {
+    "7203.T": "トヨタ自動車",
+    "6758.T": "ソニーグループ",
+    "8306.T": "三菱UFJ FG",
+    "7974.T": "任天堂",
+    "9984.T": "ソフトバンクグループ",
+    "6501.T": "日立製作所",
+    "4502.T": "武田薬品工業",
+    "AAPL": "Apple",
+    "MSFT": "Microsoft",
+    "GOOGL": "Alphabet"
+}
 
-# キャッシュを一時的に無効化して最新データを取得
+# タッチ判定の許容範囲（%）
+THRESHOLD = 1.0
+
+# データ処理関数
+@st.cache_data(ttl=3600)
 def check_touch_tickers():
     touched_list = []
     all_data = {}
 
-    ALL_TICKERS = {**JP_TICKERS, **US_TICKERS}
+    for ticker, name in TICKERS.items():
+        df = yf.Ticker(ticker).history(period="6mo")
 
-    for ticker, name in ALL_TICKERS.items():
-        # yfinance の download を使用（Ticker.history より安定）
-        df = yf.download(ticker, period="6mo", interval="1d")
-        if df.empty:
-            st.write(f"⚠️ {ticker} のデータが取得できません。")
+        # 空データや欠損列をスキップ
+        if df is None or df.empty or 'Close' not in df.columns:
             continue
 
-        # 欠損補完と移動平均計算
+        # 欠損値補完
         df['Close'] = df['Close'].fillna(method='ffill')
-        df['25MA'] = df['Close'].rolling(window=25, min_periods=1).mean()
 
+        # 25日移動平均線
+        df['25MA'] = df['Close'].rolling(window=25).mean()
+
+        # 最新データ取得
         latest_close = df['Close'].iloc[-1]
         latest_ma = df['25MA'].iloc[-1]
 
-        # NaN の場合は最新終値を代替
         if pd.isna(latest_ma):
-            latest_ma = latest_close
+            continue
 
+        # 乖離率計算
         deviation = ((latest_close - latest_ma) / latest_ma) * 100
+
+        # データ保存
         all_data[ticker] = df
 
-        # 判定
+        # タッチ判定
         if abs(deviation) <= THRESHOLD:
             touched_list.append({
                 "銘柄コード": ticker,
@@ -52,12 +68,12 @@ def check_touch_tickers():
 
     return touched_list, all_data
 
-
+# 判定実行
 with st.spinner("最新の株価データを取得中..."):
     touched_tickers, all_stock_data = check_touch_tickers()
 
-# --- 表示部分 ---
-st.header("🎯 本日のタッチ銘柄（±100%以内）")
+# 結果表示
+st.header("🎯 本日のタッチ銘柄（±1%以内）")
 if touched_tickers:
     df_touched = pd.DataFrame(touched_tickers)
     st.dataframe(df_touched, use_container_width=True)
@@ -66,11 +82,10 @@ else:
 
 st.markdown("---")
 
+# 個別チャート確認
 st.header("📈 個別チャート確認")
-
-ALL_TICKERS = {**JP_TICKERS, **US_TICKERS}
-selected_name = st.selectbox("チャートを見たい銘柄を選んでください：", list(ALL_TICKERS.values()))
-selected_ticker = [k for k, v in ALL_TICKERS.items() if v == selected_name][0]
+selected_name = st.selectbox("チャートを見たい銘柄を選んでください：", list(TICKERS.values()))
+selected_ticker = [k for k, v in TICKERS.items() if v == selected_name][0]
 
 if selected_ticker in all_stock_data:
     df_plot = all_stock_data[selected_ticker]
