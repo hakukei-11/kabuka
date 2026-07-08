@@ -2,31 +2,12 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import matplotlib.pyplot as plt
+from tickers import JP_TICKERS, US_TICKERS
 
 # 画面のタイトル設定
 st.title("📊 日本株 + 米国株 25日移動平均線タッチ判定ツール")
 st.write("日本株と米国株の中から、今日の株価が25日移動平均線に近づいている銘柄を判定します。")
 
-# 日本株ティッカー
-JP_TICKERS = {
-    "7203.T": "トヨタ自動車",
-    "6758.T": "ソニーグループ",
-    "8306.T": "三菱UFJ FG",
-    "7974.T": "任天堂",
-    "9984.T": "ソフトバンクグループ",
-    "6501.T": "日立製作所",
-    "4502.T": "武田薬品工業"
-}
-
-# 米国株ティッカー
-US_TICKERS = {
-    "AAPL": "Apple",
-    "MSFT": "Microsoft",
-    "NVDA": "NVIDIA",
-    "AMZN": "Amazon",
-    "GOOGL": "Alphabet",
-    "META": "Meta Platforms"
-}
 
 # タッチ判定の許容範囲（例: 1.0% 以内）
 THRESHOLD = 1.0
