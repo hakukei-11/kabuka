@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 st.title("📊 株価 25日移動平均線タッチ判定ツール")
 st.write("日本株と米国株の中から、今日の株価が25日移動平均線に近づいている銘柄を判定します。")
 
-# 判定対象銘柄（東証・米国株）
+# 判定対象銘柄
 TICKERS = {
     "7203.T": "トヨタ自動車",
     "6758.T": "ソニーグループ",
@@ -21,10 +21,8 @@ TICKERS = {
     "GOOGL": "Alphabet"
 }
 
-# タッチ判定の許容範囲（%）
-THRESHOLD = 1.0
+THRESHOLD = 1.0  # ±1%以内をタッチ判定
 
-# データ処理関数
 @st.cache_data(ttl=3600)
 def check_touch_tickers():
     touched_list = []
@@ -33,30 +31,28 @@ def check_touch_tickers():
     for ticker, name in TICKERS.items():
         df = yf.Ticker(ticker).history(period="6mo")
 
-        # 空データや欠損列をスキップ
         if df is None or df.empty or 'Close' not in df.columns:
             continue
 
-        # 欠損値補完
-        df['Close'] = df['Close'].fillna(method='ffill')
+        # 欠損値補完（DataFrame全体を安全に前方補完）
+        df = df.ffill()  # ← method引数なしでOK
+
+        # Close列がDataFrameの場合はSeries化
+        if isinstance(df['Close'], pd.DataFrame):
+            df['Close'] = df['Close'].iloc[:, 0]
 
         # 25日移動平均線
         df['25MA'] = df['Close'].rolling(window=25).mean()
 
-        # 最新データ取得
         latest_close = df['Close'].iloc[-1]
         latest_ma = df['25MA'].iloc[-1]
 
         if pd.isna(latest_ma):
             continue
 
-        # 乖離率計算
         deviation = ((latest_close - latest_ma) / latest_ma) * 100
-
-        # データ保存
         all_data[ticker] = df
 
-        # タッチ判定
         if abs(deviation) <= THRESHOLD:
             touched_list.append({
                 "銘柄コード": ticker,
@@ -71,6 +67,10 @@ def check_touch_tickers():
 # 判定実行
 with st.spinner("最新の株価データを取得中..."):
     touched_tickers, all_stock_data = check_touch_tickers()
+
+# 動作確認用出力
+st.write("取得データ数:", len(all_stock_data))
+st.write("タッチ銘柄数:", len(touched_tickers))
 
 # 結果表示
 st.header("🎯 本日のタッチ銘柄（±1%以内）")
