@@ -2,31 +2,23 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import matplotlib.pyplot as plt
-from tickers import TICKERS
+import matplotlib 
+from tickers import TICKERS   # ★ 銘柄テーブルを外部ファイルから読み込み
+
+# ★ 日本語フォント設定（Windows向け）
+matplotlib.rcParams['font.family'] = 'MS Gothic'      # または 'Yu Gothic'
+matplotlib.rcParams['axes.unicode_minus'] = False     # マイナス記号の文字化け防止
 
 # 画面タイトル
-st.title("📊 株価 25日移動平均線タッチ判定ツール")
-st.write("日本株と米国株の中から、今日の株価が25日移動平均線に近づいている銘柄を判定します。")
+st.title("📊 寄り付き天底狙いスクリーナー")
+st.write("25日移動平均線タッチとボックス圏タッチを検知し、翌日の寄り付きで天井・底を狙うための銘柄を抽出します。")
 
-# 判定対象銘柄
-TICKERS = {
-    "7203.T": "トヨタ自動車",
-    "6758.T": "ソニーグループ",
-    "8306.T": "三菱UFJ FG",
-    "7974.T": "任天堂",
-    "9984.T": "ソフトバンクグループ",
-    "6501.T": "日立製作所",
-    "4502.T": "武田薬品工業",
-    "AAPL": "Apple",
-    "MSFT": "Microsoft",
-    "GOOGL": "Alphabet"
-}
-
-THRESHOLD = 1.0  # ±1%以内をタッチ判定
+# 判定閾値（±1%以内をタッチと判定）
+THRESHOLD = 1.0
 
 @st.cache_data(ttl=3600)
-def check_touch_tickers():
-    touched_list = []
+def analyze_tickers():
+    results = []
     all_data = {}
 
     for ticker, name in TICKERS.items():
@@ -35,51 +27,87 @@ def check_touch_tickers():
         if df is None or df.empty or 'Close' not in df.columns:
             continue
 
-        # 欠損値補完（DataFrame全体を安全に前方補完）
-        df = df.ffill()  # ← method引数なしでOK
+        # 欠損値補完
+        df = df.ffill()
 
-        # Close列がDataFrameの場合はSeries化
+        # CloseがDataFrameの場合はSeries化
         if isinstance(df['Close'], pd.DataFrame):
             df['Close'] = df['Close'].iloc[:, 0]
 
         # 25日移動平均線
         df['25MA'] = df['Close'].rolling(window=25).mean()
 
+        # ボックス圏（過去20日間の高値・安値）
+        df['High20'] = df['High'].rolling(20).max()
+        df['Low20']  = df['Low'].rolling(20).min()
+
         latest_close = df['Close'].iloc[-1]
         latest_ma = df['25MA'].iloc[-1]
+        latest_high20 = df['High20'].iloc[-1]
+        latest_low20  = df['Low20'].iloc[-1]
 
-        if pd.isna(latest_ma):
+        if pd.isna(latest_ma) or pd.isna(latest_high20) or pd.isna(latest_low20):
             continue
 
-        deviation = ((latest_close - latest_ma) / latest_ma) * 100
+        # 乖離率（25MA）
+        deviation_ma = ((latest_close - latest_ma) / latest_ma) * 100
+
+        # ボックス圏タッチ判定
+        box_top_touch = abs(latest_close - latest_high20) <= (latest_high20 * THRESHOLD / 100)
+        box_bottom_touch = abs(latest_close - latest_low20) <= (latest_low20 * THRESHOLD / 100)
+
+        # 結果保存
         all_data[ticker] = df
 
-        if abs(deviation) <= THRESHOLD:
-            touched_list.append({
+        # 25MAタッチ
+        if abs(deviation_ma) <= THRESHOLD:
+            results.append({
                 "銘柄コード": ticker,
                 "銘柄名": name,
-                "最新終値": round(latest_close, 1),
-                "25日移動平均": round(latest_ma, 1),
-                "乖離率(%)": round(deviation, 2)
+                "判定": "25MAタッチ（反発候補）",
+                "終値": round(latest_close, 1),
+                "25MA": round(latest_ma, 1),
+                "乖離率(%)": round(deviation_ma, 2)
             })
 
-    return touched_list, all_data
+        # ボックス上限タッチ（天井候補）
+        if box_top_touch:
+            results.append({
+                "銘柄コード": ticker,
+                "銘柄名": name,
+                "判定": "ボックス上限タッチ（天井候補）",
+                "終値": round(latest_close, 1),
+                "上限値": round(latest_high20, 1)
+            })
+
+        # ボックス下限タッチ（底候補）
+        if box_bottom_touch:
+            results.append({
+                "銘柄コード": ticker,
+                "銘柄名": name,
+                "判定": "ボックス下限タッチ（底候補）",
+                "終値": round(latest_close, 1),
+                "下限値": round(latest_low20, 1)
+            })
+
+    return results, all_data
+
 
 # 判定実行
 with st.spinner("最新の株価データを取得中..."):
-    touched_tickers, all_stock_data = check_touch_tickers()
+    results, all_stock_data = analyze_tickers()
 
 # 動作確認用出力
 st.write("取得データ数:", len(all_stock_data))
-st.write("タッチ銘柄数:", len(touched_tickers))
+st.write("検知銘柄数:", len(results))
 
 # 結果表示
-st.header("🎯 本日のタッチ銘柄（±1%以内）")
-if touched_tickers:
-    df_touched = pd.DataFrame(touched_tickers)
-    st.dataframe(df_touched, use_container_width=True)
+st.header("🎯 寄り付き天底候補銘柄一覧")
+if results:
+    df_results = pd.DataFrame(results)
+    st.dataframe(df_results, use_container_width=True)
 else:
-    st.info("現在、25日移動平均線にタッチしている銘柄はありません。")
+    st.info("現在、天井・底候補の銘柄はありません。")
 
 st.markdown("---")
 
@@ -94,6 +122,8 @@ if selected_ticker in all_stock_data:
     fig, ax = plt.subplots(figsize=(10, 5))
     ax.plot(df_plot.index, df_plot['Close'], label="株価（終値）", color="blue")
     ax.plot(df_plot.index, df_plot['25MA'], label="25日移動平均線", color="orange", linestyle="--")
+    ax.plot(df_plot.index, df_plot['High20'], label="ボックス上限（20日）", color="red", linestyle=":")
+    ax.plot(df_plot.index, df_plot['Low20'], label="ボックス下限（20日）", color="green", linestyle=":")
     ax.set_title(f"{selected_name} ({selected_ticker}) - 過去6ヶ月")
     ax.legend()
     ax.grid(True)
