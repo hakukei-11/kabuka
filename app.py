@@ -2,6 +2,7 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import matplotlib.pyplot as plt
+from tickers import TICKERS
 
 # 画面タイトル
 st.title("📊 株価 25日移動平均線タッチ判定ツール")

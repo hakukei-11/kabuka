@@ -1,20 +1,14 @@
-# 日本株ティッカー
-JP_TICKERS = {
+# tickers.py
+
+TICKERS = {
     "7203.T": "トヨタ自動車",
     "6758.T": "ソニーグループ",
     "8306.T": "三菱UFJ FG",
     "7974.T": "任天堂",
     "9984.T": "ソフトバンクグループ",
     "6501.T": "日立製作所",
-    "4502.T": "武田薬品工業"
-}
-
-# 米国株ティッカー
-US_TICKERS = {
+    "4502.T": "武田薬品工業",
     "AAPL": "Apple",
     "MSFT": "Microsoft",
-    "NVDA": "NVIDIA",
-    "AMZN": "Amazon",
-    "GOOGL": "Alphabet",
-    "META": "Meta Platforms"
+    "GOOGL": "Alphabet"
 }
