@@ -5,22 +5,21 @@ import requests
 import os
 from datetime import datetime
 
-# 監視する銘柄リスト
-TICKERS = ["7974.T", "6501.T", "AAPL", "MSFT"]  # 必要に応じて追加
+# 監視する銘柄リスト（tickers.py に合わせて自由に追加可能）
+TICKERS = ["7974.T", "6501.T", "AAPL", "MSFT"]
 
-# GitHub Secrets から読み込む
+# GitHub Secrets から読み込む Messaging API トークン
 LINE_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
 
 # LINE Messaging API の Push API エンドポイント
 LINE_URL = "https://api.line.me/v2/bot/message/push"
 
-# ★重要★ あなたの LINE の userId をここに入れる
-# （LINE Developers → Messaging API → Webhookログで取得）
-USER_ID = "YOUR_USER_ID_HERE"
+# あなたの LINE ユーザーID（Webhookログで取得した値）
+USER_ID = "U889b3c025bd9a29b4651833d39a4f7a6"
 
 
-def send_line(message):
-    """LINE Messaging API で通知を送る"""
+def send_line(message: str):
+    """LINE Messaging API で通知を送信"""
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {LINE_TOKEN}"
@@ -31,10 +30,12 @@ def send_line(message):
             {"type": "text", "text": message}
         ]
     }
-    requests.post(LINE_URL, headers=headers, json=data)
+    response = requests.post(LINE_URL, headers=headers, json=data)
+    if response.status_code != 200:
+        print(f"LINE送信エラー: {response.status_code} - {response.text}")
 
 
-def get_close(ticker):
+def get_close(ticker: str) -> float:
     """終値を取得（前日比判定用に2日分）"""
     df = yf.Ticker(ticker).history(period="2d")
     df = df.ffill()
@@ -45,7 +46,7 @@ def get_close(ticker):
 try:
     with open("update_status.json", "r") as f:
         status = json.load(f)
-except:
+except FileNotFoundError:
     status = {}
 
 updated_list = []  # 更新された銘柄を記録
@@ -77,7 +78,7 @@ for ticker in TICKERS:
 
 # JSON 保存
 with open("update_status.json", "w") as f:
-    json.dump(status, f, indent=4)
+    json.dump(status, f, indent=4, ensure_ascii=False)
 
 
 # LINE 通知（更新があった場合のみ）
