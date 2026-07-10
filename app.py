@@ -10,7 +10,7 @@ from tickers import TICKERS
 matplotlib.rcParams['font.family'] = 'MS Gothic'
 matplotlib.rcParams['axes.unicode_minus'] = False
 
-st.title("📊 寄り付き天底狙いスクリーナー（RSI＋MACD＋反発確度スコア＋前日比）")
+st.title("📊 寄り付き天底狙いスクリーナー（RSI＋MACD＋反発確度＋前日比）")
 
 THRESHOLD = 1.0  # ±1%以内をタッチ判定
 
@@ -147,62 +147,76 @@ df_jp = df_results[df_results["銘柄コード"].str.endswith(".T")]
 df_us = df_results[~df_results["銘柄コード"].str.endswith(".T")]
 
 # =========================
-# 🇯🇵 日本株一覧
+# 🇯🇵 日本株 / 🇺🇸 米国株 タブ表示
 # =========================
-st.header("🇯🇵 日本株一覧（前日比＋RSI＋MACD＋スコア）")
-st.dataframe(df_jp, use_container_width=True)
+tab_jp, tab_us = st.tabs(["🇯🇵 日本株", "🇺🇸 米国株"])
 
-# =========================
-# 🇺🇸 米国株一覧
-# =========================
-st.header("🇺🇸 米国株一覧（前日比＋RSI＋MACD＋スコア）")
-st.dataframe(df_us, use_container_width=True)
+# -------------------------
+# 🇯🇵 日本株タブ
+# -------------------------
+with tab_jp:
+    st.header("🇯🇵 日本株一覧（前日比＋RSI＋MACD＋スコア）")
+    st.dataframe(df_jp, use_container_width=True)
 
-# =========================
-# 🇯🇵 日本株 上位5銘柄
-# =========================
-st.header("🔥 日本株：反発確度スコア上位5銘柄")
+    st.header("🔥 日本株：反発確度スコア上位5銘柄")
+    top5_jp = df_jp.head(5)
 
-top5_jp = df_jp.head(5)
-for idx, row in top5_jp.iterrows():
-    st.subheader(f"{row['銘柄名']}（{row['銘柄コード']}）")
-    st.write(f"判定：**{row['判定']}**")
-    st.write(f"反発確度スコア：**{row['反発確度スコア']}点**")
-    st.write(f"終値：{row['終値']}（前日比：{row['前日比']} / {row['前日比率(%)']}%）")
-    st.write(f"RSI：{row['RSI']}")
-    st.write(f"MACD：{row['MACD']} / Signal：{row['Signal']}")
-    st.write("---")
+    for idx, row in top5_jp.iterrows():
+        st.subheader(f"{row['銘柄名']}（{row['銘柄コード']}）")
+        st.write(f"判定：**{row['判定']}**")
+        st.write(f"反発確度スコア：**{row['反発確度スコア']}点**")
+        st.write(f"終値：{row['終値']}（前日比：{row['前日比']} / {row['前日比率(%)']}%）")
+        st.write(f"RSI：{row['RSI']}")
+        st.write(f"MACD：{row['MACD']} / Signal：{row['Signal']}")
+        st.write("---")
 
-# =========================
-# 🇺🇸 米国株 上位5銘柄
-# =========================
-st.header("🔥 米国株：反発確度スコア上位5銘柄")
+    # チャート表示（日本株）
+    st.header("📈 日本株チャート表示")
+    selected_name_jp = st.selectbox("日本株を選択：", list(df_jp["銘柄名"]))
+    selected_ticker_jp = df_jp[df_jp["銘柄名"] == selected_name_jp]["銘柄コード"].iloc[0]
+    df_plot_jp = all_stock_data[selected_ticker_jp]
 
-top5_us = df_us.head(5)
-for idx, row in top5_us.iterrows():
-    st.subheader(f"{row['銘柄名']}（{row['銘柄コード']}）")
-    st.write(f"判定：**{row['判定']}**")
-    st.write(f"反発確度スコア：**{row['反発確度スコア']}点**")
-    st.write(f"終値：{row['終値']}（前日比：{row['前日比']} / {row['前日比率(%)']}%）")
-    st.write(f"RSI：{row['RSI']}")
-    st.write(f"MACD：{row['MACD']} / Signal：{row['Signal']}")
-    st.write("---")
+    fig_jp, ax_jp = plt.subplots(figsize=(10, 5))
+    ax_jp.plot(df_plot_jp.index, df_plot_jp['Close'], label="株価（終値）", color="blue")
+    ax_jp.plot(df_plot_jp.index, df_plot_jp['25MA'], label="25日移動平均線", color="orange", linestyle="--")
+    ax_jp.plot(df_plot_jp.index, df_plot_jp['High20'], label="ボックス上限（20日）", color="red", linestyle=":")
+    ax_jp.plot(df_plot_jp.index, df_plot_jp['Low20'], label="ボックス下限（20日）", color="green", linestyle=":")
+    ax_jp.set_title(f"{selected_name_jp} ({selected_ticker_jp}) - 過去6ヶ月")
+    ax_jp.legend()
+    ax_jp.grid(True)
+    st.pyplot(fig_jp)
 
+# -------------------------
+# 🇺🇸 米国株タブ
+# -------------------------
+with tab_us:
+    st.header("🇺🇸 米国株一覧（前日比＋RSI＋MACD＋スコア）")
+    st.dataframe(df_us, use_container_width=True)
 
-# --- チャート表示 ---
-st.header("📈 個別チャート表示")
-selected_name = st.selectbox("銘柄を選択：", list(TICKERS.values()))
-selected_ticker = [k for k, v in TICKERS.items() if v == selected_name][0]
+    st.header("🔥 米国株：反発確度スコア上位5銘柄")
+    top5_us = df_us.head(5)
 
-df_plot = all_stock_data[selected_ticker]
+    for idx, row in top5_us.iterrows():
+        st.subheader(f"{row['銘柄名']}（{row['銘柄コード']}）")
+        st.write(f"判定：**{row['判定']}**")
+        st.write(f"反発確度スコア：**{row['反発確度スコア']}点**")
+        st.write(f"終値：{row['終値']}（前日比：{row['前日比']} / {row['前日比率(%)']}%）")
+        st.write(f"RSI：{row['RSI']}")
+        st.write(f"MACD：{row['MACD']} / Signal：{row['Signal']}")
+        st.write("---")
 
-fig, ax = plt.subplots(figsize=(10, 5))
-ax.plot(df_plot.index, df_plot['Close'], label="株価（終値）", color="blue")
-ax.plot(df_plot.index, df_plot['25MA'], label="25日移動平均線", color="orange", linestyle="--")
-ax.plot(df_plot.index, df_plot['High20'], label="ボックス上限（20日）", color="red", linestyle=":")
-ax.plot(df_plot.index, df_plot['Low20'], label="ボックス下限（20日）", color="green", linestyle=":")
-ax.set_title(f"{selected_name} ({selected_ticker}) - 過去6ヶ月")
-ax.legend()
-ax.grid(True)
+    # チャート表示（米国株）
+    st.header("📈 米国株チャート表示")
+    selected_name_us = st.selectbox("米国株を選択：", list(df_us["銘柄名"]))
+    selected_ticker_us = df_us[df_us["銘柄名"] == selected_name_us]["銘柄コード"].iloc[0]
+    df_plot_us = all_stock_data[selected_ticker_us]
 
-st.pyplot(fig)
+    fig_us, ax_us = plt.subplots(figsize=(10, 5))
+    ax_us.plot(df_plot_us.index, df_plot_us['Close'], label="株価（終値）", color="blue")
+    ax_us.plot(df_plot_us.index, df_plot_us['25MA'], label="25日移動平均線", color="orange", linestyle="--")
+    ax_us.plot(df_plot_us.index, df_plot_us['High20'], label="ボックス上限（20日）", color="red", linestyle=":")
+    ax_us.plot(df_plot_us.index, df_plot_us['Low20'], label="ボックス下限（20日）", color="green", linestyle=":")
+    ax_us.set_title(f"{selected_name_us} ({selected_ticker_us}) - 過去6ヶ月")
+    ax_us.legend()
+    ax_us.grid(True)
+    st.pyplot(fig_us)
