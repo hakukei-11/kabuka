@@ -1,28 +1,60 @@
 # update_checker.py
 import yfinance as yf
 import json
+import requests
+import os
 from datetime import datetime
 
-TICKERS = ["7974.T", "6501.T", "AAPL", "MSFT"]  # ← 任意の銘柄を追加
+# 監視する銘柄リスト
+TICKERS = ["7974.T", "6501.T", "AAPL", "MSFT"]  # 必要に応じて追加
+
+# GitHub Secrets から読み込む
+LINE_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
+
+# LINE Messaging API の Push API エンドポイント
+LINE_URL = "https://api.line.me/v2/bot/message/push"
+
+# ★重要★ あなたの LINE の userId をここに入れる
+# （LINE Developers → Messaging API → Webhookログで取得）
+USER_ID = "YOUR_USER_ID_HERE"
+
+
+def send_line(message):
+    """LINE Messaging API で通知を送る"""
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {LINE_TOKEN}"
+    }
+    data = {
+        "to": USER_ID,
+        "messages": [
+            {"type": "text", "text": message}
+        ]
+    }
+    requests.post(LINE_URL, headers=headers, json=data)
+
 
 def get_close(ticker):
+    """終値を取得（前日比判定用に2日分）"""
     df = yf.Ticker(ticker).history(period="2d")
     df = df.ffill()
     return float(df["Close"].iloc[-1])
 
-# 前回の終値を読み込み
+
+# 前回の終値データを読み込み
 try:
     with open("update_status.json", "r") as f:
         status = json.load(f)
 except:
     status = {}
 
-updated = False
+updated_list = []  # 更新された銘柄を記録
+
 
 for ticker in TICKERS:
     new_close = get_close(ticker)
 
-    # 初回 or 前回値がない場合
+    # 初回データがない場合は登録だけする
     if ticker not in status:
         status[ticker] = {
             "last_close": new_close,
@@ -31,17 +63,23 @@ for ticker in TICKERS:
         }
         continue
 
-    # 差分比較
+    # 終値が変わったか判定
     if new_close != status[ticker]["last_close"]:
         status[ticker]["updated"] = True
         status[ticker]["last_update_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         status[ticker]["last_close"] = new_close
-        updated = True
+
+        updated_list.append(f"{ticker} 終値更新 → {new_close}")
+
     else:
         status[ticker]["updated"] = False
 
-# JSON に保存
+
+# JSON 保存
 with open("update_status.json", "w") as f:
     json.dump(status, f, indent=4)
 
-print("終値更新チェック完了")
+
+# LINE 通知（更新があった場合のみ）
+if updated_list:
+    send_line("\n".join(updated_list))
