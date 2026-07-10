@@ -3,7 +3,7 @@ name: Stock Close Update Checker
 
 on:
   schedule:
-    - cron: "0 * * * *"   # 毎時0分に実行
+    - cron: "0 * * * *"   # 毎時0分に自動実行
   workflow_dispatch:       # 手動実行も可能
 
 jobs:
@@ -11,22 +11,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    # リポジトリをチェックアウト
     - name: Checkout repository
       uses: actions/checkout@v3
 
+    # Python環境をセットアップ
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: "3.10"
 
+    # 必要なライブラリをインストール
     - name: Install dependencies
       run: |
-        pip install yfinance
+        pip install yfinance requests
 
+    # 終値更新チェッカーを実行
     - name: Run update checker
+      env:
+        LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
       run: |
         python update_checker.py
 
+    # 結果ファイルをコミットしてGitHubに反映
     - name: Commit update_status.json
       run: |
         git config user.name "github-actions"
