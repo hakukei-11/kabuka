@@ -10,7 +10,7 @@ from tickers import TICKERS
 matplotlib.rcParams['font.family'] = 'MS Gothic'
 matplotlib.rcParams['axes.unicode_minus'] = False
 
-st.title("📊 寄り付き天底狙いスクリーナー（RSI＋MACD＋反発確度スコア）")
+st.title("📊 寄り付き天底狙いスクリーナー（RSI＋MACD＋反発確度スコア＋前日比）")
 
 THRESHOLD = 1.0  # ±1%以内をタッチ判定
 
@@ -69,11 +69,17 @@ def analyze_tickers():
 
         df = df.ffill()
 
+        # --- 当日終値と前日終値 ---
+        latest_close = df['Close'].iloc[-1]
+        previous_close = df['Close'].iloc[-2]
+        diff = latest_close - previous_close
+        pct = (diff / previous_close) * 100
+
+        # --- テクニカル ---
         df['25MA'] = df['Close'].rolling(25).mean()
         df['High20'] = df['High'].rolling(20).max()
         df['Low20'] = df['Low'].rolling(20).min()
 
-        latest_close = df['Close'].iloc[-1]
         latest_ma = df['25MA'].iloc[-1]
         latest_high20 = df['High20'].iloc[-1]
         latest_low20 = df['Low20'].iloc[-1]
@@ -115,6 +121,9 @@ def analyze_tickers():
             "銘柄名": name,
             "判定": judge,
             "終値": round(latest_close, 1),
+            "前日終値": round(previous_close, 1),
+            "前日比": round(diff, 1),
+            "前日比率(%)": round(pct, 2),
             "RSI": round(latest_rsi, 1),
             "MACD": round(latest_macd, 3),
             "Signal": round(latest_signal, 3),
@@ -129,24 +138,24 @@ def analyze_tickers():
 # --- 実行 ---
 results, all_stock_data = analyze_tickers()
 
+df_results = pd.DataFrame(results).sort_values("反発確度スコア", ascending=False)
+
 # =========================
 # 日本株・米国株を分離
 # =========================
-df_results = pd.DataFrame(results).sort_values("反発確度スコア", ascending=False)
-
 df_jp = df_results[df_results["銘柄コード"].str.endswith(".T")]
 df_us = df_results[~df_results["銘柄コード"].str.endswith(".T")]
 
 # =========================
 # 🇯🇵 日本株一覧
 # =========================
-st.header("🇯🇵 日本株一覧（RSI＋MACD＋スコア付き）")
+st.header("🇯🇵 日本株一覧（前日比＋RSI＋MACD＋スコア）")
 st.dataframe(df_jp, use_container_width=True)
 
 # =========================
 # 🇺🇸 米国株一覧
 # =========================
-st.header("🇺🇸 米国株一覧（RSI＋MACD＋スコア付き）")
+st.header("🇺🇸 米国株一覧（前日比＋RSI＋MACD＋スコア）")
 st.dataframe(df_us, use_container_width=True)
 
 # =========================
@@ -159,7 +168,7 @@ for idx, row in top5_jp.iterrows():
     st.subheader(f"{row['銘柄名']}（{row['銘柄コード']}）")
     st.write(f"判定：**{row['判定']}**")
     st.write(f"反発確度スコア：**{row['反発確度スコア']}点**")
-    st.write(f"株価（終値）：{row['終値']}")
+    st.write(f"終値：{row['終値']}（前日比：{row['前日比']} / {row['前日比率(%)']}%）")
     st.write(f"RSI：{row['RSI']}")
     st.write(f"MACD：{row['MACD']} / Signal：{row['Signal']}")
     st.write("---")
@@ -174,7 +183,7 @@ for idx, row in top5_us.iterrows():
     st.subheader(f"{row['銘柄名']}（{row['銘柄コード']}）")
     st.write(f"判定：**{row['判定']}**")
     st.write(f"反発確度スコア：**{row['反発確度スコア']}点**")
-    st.write(f"株価（終値）：{row['終値']}")
+    st.write(f"終値：{row['終値']}（前日比：{row['前日比']} / {row['前日比率(%)']}%）")
     st.write(f"RSI：{row['RSI']}")
     st.write(f"MACD：{row['MACD']} / Signal：{row['Signal']}")
     st.write("---")
