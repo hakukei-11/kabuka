@@ -1,43 +1,40 @@
-# .github/workflows/update_checker.yml
 name: Stock Close Update Checker
 
 on:
   schedule:
-    - cron: "0 * * * *"   # 毎時0分に自動実行
-  workflow_dispatch:       # 手動実行も可能
+    - cron: "0 * * * *"
+  workflow_dispatch:
 
 jobs:
   check:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write   # ← これが重要（push権限）
+
     steps:
-    # リポジトリをチェックアウト
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    # Python環境をセットアップ
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: "3.10"
 
-    # 必要なライブラリをインストール
     - name: Install dependencies
       run: |
-        pip install yfinance requests
+        pip install yfinance requests pandas numpy
 
-    # 終値更新チェッカーを実行
     - name: Run update checker
       env:
         LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
       run: |
         python update_checker.py
 
-    # 結果ファイルをコミットしてGitHubに反映
     - name: Commit update_status.json
       run: |
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
-        git add update_status.json
+        git add update_status.json || echo "No file"
         git commit -m "Update stock close status" || echo "No changes"
         git push
