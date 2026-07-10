@@ -4,6 +4,7 @@ import yfinance as yf
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
+import json
 from tickers import TICKERS
 
 # 日本語フォント設定
@@ -13,6 +14,24 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 st.title("📊 寄り付き天底狙いスクリーナー（RSI＋MACD＋反発確度＋前日比）")
 
 THRESHOLD = 1.0  # ±1%以内をタッチ判定
+
+
+# =========================
+# 📅 終値更新状況（GitHub Actions）
+# =========================
+st.header("📅 終値更新状況（GitHub Actions）")
+
+try:
+    with open("update_status.json", "r") as f:
+        update_status = json.load(f)
+except:
+    update_status = {}
+
+for ticker, info in update_status.items():
+    if info["updated"]:
+        st.success(f"{ticker} 終値更新済み（{info['last_update_time']}）")
+    else:
+        st.warning(f"{ticker} 終値未更新")
 
 
 # --- RSI計算 ---
