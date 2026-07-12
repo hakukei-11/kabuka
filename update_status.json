@@ -1,2 +1,22 @@
-{}
-
+{
+    "7974.T": {
+        "last_close": 7030.0,
+        "updated": false,
+        "last_update_time": null
+    },
+    "6501.T": {
+        "last_close": 4700.0,
+        "updated": false,
+        "last_update_time": null
+    },
+    "AAPL": {
+        "last_close": 315.32000732421875,
+        "updated": false,
+        "last_update_time": null
+    },
+    "MSFT": {
+        "last_close": 385.1000061035156,
+        "updated": false,
+        "last_update_time": null
+    }
+}
