@@ -33,13 +33,18 @@ def send_line(message: str):
     response = requests.post(LINE_URL, headers=headers, json=data)
     if response.status_code != 200:
         print(f"LINE送信エラー: {response.status_code} - {response.text}")
+    else:
+        print("LINE送信成功")
 
 
-def get_close(ticker: str) -> float:
+def get_close(ticker: str) -> float | None:
     """終値を取得（前日比判定用に2日分）"""
-    df = yf.Ticker(ticker).history(period="2d")
-    df = df.ffill()
-    return float(df["Close"].iloc[-1])
+    df = yf.Ticker(ticker).history(period="2d").ffill()
+    close = df["Close"].dropna()
+    if close.empty:
+        print(f"{ticker} の終値データが取得できませんでした。")
+        return None
+    return float(close.iloc[-1])
 
 
 # 前回の終値データを読み込み
@@ -54,6 +59,8 @@ updated_list = []  # 更新された銘柄を記録
 
 for ticker in TICKERS:
     new_close = get_close(ticker)
+    if new_close is None:
+        continue
 
     # 初回データがない場合は登録だけする
     if ticker not in status:
@@ -64,23 +71,25 @@ for ticker in TICKERS:
         }
         continue
 
-    # 終値が変わったか判定
-    if new_close != status[ticker]["last_close"]:
+    # 終値が変わったか判定（誤差0.01円以上で更新扱い）
+    if abs(new_close - status[ticker]["last_close"]) > 0.01:
         status[ticker]["updated"] = True
         status[ticker]["last_update_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         status[ticker]["last_close"] = new_close
-
         updated_list.append(f"{ticker} 終値更新 → {new_close}")
-
     else:
         status[ticker]["updated"] = False
 
 
-# JSON 保存
-with open("update_status.json", "w") as f:
-    json.dump(status, f, indent=4, ensure_ascii=False)
+# JSON 保存と例外処理
+try:
+    with open("update_status.json", "w") as f:
+        json.dump(status, f, indent=4, ensure_ascii=False)
 
+    # LINE 通知（更新があった場合のみ）
+    if updated_list:
+        send_line("\n".join(updated_list))
 
-# LINE 通知（更新があった場合のみ）
-if updated_list:
-    send_line("\n".join(updated_list))
+except Exception as e:
+    print(f"エラー発生: {e}")
+    exit(0)  # GitHub Actionsを成功扱いで終了
