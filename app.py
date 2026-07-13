@@ -4,11 +4,17 @@ import yfinance as yf
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
+import matplotlib.font_manager as fm
 import json
 from tickers import TICKERS
 
-# 日本語フォント設定
-matplotlib.rcParams['font.family'] = 'MS Gothic'
+# =========================
+# 日本語フォント設定（Streamlit Cloud用）
+# =========================
+# リポジトリ内に fonts/ipaexg.ttf を置いておくこと
+font_path = "./fonts/ipaexg.ttf"
+fm.fontManager.addfont(font_path)
+matplotlib.rc('font', family='IPAexGothic')
 matplotlib.rcParams['axes.unicode_minus'] = False
 
 st.title("📊 寄り付き天底狙いスクリーナー（RSI＋MACD＋反発確度＋前日比）")
@@ -126,14 +132,15 @@ def analyze_tickers():
             latest_signal
         )
 
-        # 判定文字
-        judge = ""
-        if abs(deviation_ma) <= THRESHOLD:
-            judge = "25MAタッチ（反発候補）"
-        if box_top_touch:
-            judge = "ボックス上限タッチ（天井候補）"
+        # 判定文字（上書き防止）
         if box_bottom_touch:
             judge = "ボックス下限タッチ（底候補）"
+        elif box_top_touch:
+            judge = "ボックス上限タッチ（天井候補）"
+        elif abs(deviation_ma) <= THRESHOLD:
+            judge = "25MAタッチ（反発候補）"
+        else:
+            judge = "判定なし"
 
         results.append({
             "銘柄コード": ticker,
