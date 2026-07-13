@@ -1,3 +1,4 @@
+# update_checker.py
 import yfinance as yf
 import json
 import requests
@@ -13,12 +14,14 @@ THRESHOLD = 1.0  # ±1%以内をタッチ判定
 
 
 def send_line(message: str):
+    """LINE Messaging API に通知を送る"""
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {LINE_TOKEN}"
     }
     data = {"to": USER_ID, "messages": [{"type": "text", "text": message}]}
     response = requests.post(LINE_URL, headers=headers, json=data)
+
     if response.status_code != 200:
         print(f"LINE送信エラー: {response.status_code} - {response.text}")
     else:
@@ -58,11 +61,19 @@ def calc_score(is_25ma_touch, is_box_bottom_touch, rsi, macd, signal):
     return score
 
 
-def get_close(ticker: str) -> float | None:
-    df = yf.Ticker(ticker).history(period="6mo").ffill()
-    if df.empty:
+def get_analysis(ticker: str):
+    """終値・スコア・判定文字をまとめて返す"""
+    try:
+        df = yf.Ticker(ticker).history(period="6mo").ffill()
+    except Exception as e:
+        print(f"{ticker} データ取得エラー: {e}")
         return None
 
+    if df.empty:
+        print(f"{ticker} データなし")
+        return None
+
+    # テクニカル指標
     df["25MA"] = df["Close"].rolling(25).mean()
     df["High20"] = df["High"].rolling(20).max()
     df["Low20"] = df["Low"].rolling(20).min()
@@ -71,16 +82,38 @@ def get_close(ticker: str) -> float | None:
 
     latest_close = df["Close"].iloc[-1]
     latest_ma = df["25MA"].iloc[-1]
+    latest_high20 = df["High20"].iloc[-1]
     latest_low20 = df["Low20"].iloc[-1]
     latest_rsi = df["RSI"].iloc[-1]
     latest_macd = df["MACD"].iloc[-1]
     latest_signal = df["Signal"].iloc[-1]
 
     deviation_ma = ((latest_close - latest_ma) / latest_ma) * 100
-    box_bottom_touch = abs(latest_close - latest_low20) <= (latest_low20 * THRESHOLD / 100)
 
-    score = calc_score(abs(deviation_ma) <= THRESHOLD, box_bottom_touch, latest_rsi, latest_macd, latest_signal)
-    return latest_close, score
+    # 判定
+    judges = []
+
+    if abs(deviation_ma) <= THRESHOLD:
+        judges.append("25MAタッチ（反発候補）")
+
+    if abs(latest_close - latest_high20) <= (latest_high20 * THRESHOLD / 100):
+        judges.append("ボックス上限タッチ（天井候補）")
+
+    if abs(latest_close - latest_low20) <= (latest_low20 * THRESHOLD / 100):
+        judges.append("ボックス下限タッチ（底候補）")
+
+    judge = "・".join(judges) if judges else "判定なし"
+
+    # スコア
+    score = calc_score(
+        abs(deviation_ma) <= THRESHOLD,
+        abs(latest_close - latest_low20) <= (latest_low20 * THRESHOLD / 100),
+        latest_rsi,
+        latest_macd,
+        latest_signal
+    )
+
+    return latest_close, score, judge
 
 
 # JSON読み込み
@@ -93,32 +126,50 @@ except FileNotFoundError:
 updated_list = []
 
 for ticker in TICKERS:
-    result = get_close(ticker)
+    result = get_analysis(ticker)
     if result is None:
         continue
 
-    new_close, score = result
+    new_close, score, judge = result
 
     if ticker not in status:
-        status[ticker] = {"last_close": new_close, "updated": False, "last_update_time": None}
+        status[ticker] = {
+            "last_close": new_close,
+            "updated": False,
+            "last_update_time": None
+        }
         continue
 
+    # 終値が変わったか判定
     if abs(new_close - status[ticker]["last_close"]) > 0.01:
         status[ticker]["updated"] = True
         status[ticker]["last_update_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         status[ticker]["last_close"] = new_close
 
-        # 🔥 スコアが50以上の銘柄のみ通知
+        # 🔥 スコア50以上の銘柄だけ通知（判定文字も含める）
         if score >= 50:
-            updated_list.append(f"{ticker} 終値更新 → {new_close}（反発確度スコア: {score}）")
+            updated_list.append(
+                f"{ticker} 終値更新 → {new_close}\n"
+                f"判定：{judge}\n"
+                f"反発確度スコア：{score}"
+            )
     else:
         status[ticker]["updated"] = False
 
 
-# JSON保存
-with open("update_status.json", "w") as f:
-    json.dump(status, f, indent=4, ensure_ascii=False)
+# JSON保存（例外処理付き）
+try:
+    with open("update_status.json", "w") as f:
+        json.dump(status, f, indent=4, ensure_ascii=False)
+except Exception as e:
+    print(f"JSON保存エラー: {e}")
+    exit(0)
 
-# LINE通知
-if updated_list:
-    send_line("\n".join(updated_list))
+
+# LINE通知（例外処理付き）
+try:
+    if updated_list:
+        send_line("\n\n".join(updated_list))
+except Exception as e:
+    print(f"LINE通知エラー: {e}")
+    exit(0)
