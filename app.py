@@ -97,7 +97,7 @@ def analyze_all():
     # =========================
     # 🔥 200銘柄をまとめて高速取得
     # =========================
-    df_all = yf.download(tickers_list, period="6mo", group_by="ticker")
+    df_all = yf.download(tickers_list, period="6mo", group_by="ticker", threads=True)
 
     results = []
     chart_data = {}
@@ -105,7 +105,8 @@ def analyze_all():
     for ticker, name in TICKERS.items():
         try:
             df = df_all[ticker].dropna()
-        except:
+        except Exception as e:
+            print(f"{ticker} 取得エラー: {e}")
             continue
 
         if df.empty or len(df) < 2:
@@ -114,8 +115,13 @@ def analyze_all():
         df = df.ffill()
 
         # 終値・前日比（安全化）
-        latest_close = df["Close"].iloc[-1]
-        previous_close = df["Close"].iloc[-2]
+        try:
+            latest_close = df["Close"].iloc[-1]
+            previous_close = df["Close"].iloc[-2]
+        except Exception as e:
+            print(f"{ticker} 終値取得エラー: {e}")
+            continue
+
         diff = latest_close - previous_close
         pct = (diff / previous_close) * 100
 
@@ -126,4 +132,138 @@ def analyze_all():
 
         latest_ma = df["25MA"].iloc[-1]
         latest_high20 = df["High20"].iloc[-1]
-        latest_low20 = df
+        latest_low20 = df["Low20"].iloc[-1]
+
+        deviation_ma = ((latest_close - latest_ma) / latest_ma) * 100
+
+        box_top_touch = abs(latest_close - latest_high20) <= (latest_high20 * THRESHOLD / 100)
+        box_bottom_touch = abs(latest_close - latest_low20) <= (latest_low20 * THRESHOLD / 100)
+
+        # RSI
+        df["RSI"] = calc_rsi(df["Close"])
+        latest_rsi = df["RSI"].iloc[-1]
+
+        # MACD
+        df["MACD"], df["Signal"] = calc_macd(df["Close"])
+        latest_macd = df["MACD"].iloc[-1]
+        latest_signal = df["Signal"].iloc[-1]
+
+        # スコア
+        score = calc_score(
+            abs(deviation_ma) <= THRESHOLD,
+            box_bottom_touch,
+            latest_rsi,
+            latest_macd,
+            latest_signal
+        )
+
+        # 判定文字
+        judges = []
+        if abs(deviation_ma) <= THRESHOLD:
+            judges.append("25MAタッチ（反発候補）")
+        if box_top_touch:
+            judges.append("ボックス上限タッチ（天井候補）")
+        if box_bottom_touch:
+            judges.append("ボックス下限タッチ（底候補）")
+
+        judge = "・".join(judges) if judges else "判定なし"
+
+        # スコア50以上のみ採用
+        if score >= 50:
+            results.append({
+                "銘柄コード": ticker,
+                "銘柄名": name,
+                "判定": judge,
+                "終値": round(latest_close, 1),
+                "前日比": round(diff, 1),
+                "前日比率(%)": round(pct, 2),
+                "RSI": round(latest_rsi, 1),
+                "MACD": round(latest_macd, 3),
+                "Signal": round(latest_signal, 3),
+                "反発確度スコア": score
+            })
+
+            chart_data[ticker] = df
+
+    return results, chart_data
+
+
+# --- 実行 ---
+st.write("✅ analyze_all() 実行開始")
+results, chart_data = analyze_all()
+st.write("✅ analyze_all() 実行完了")
+
+df_results = pd.DataFrame(results).sort_values("反発確度スコア", ascending=False)
+
+# 日本株・米国株分離
+df_jp = df_results[df_results["銘柄コード"].str.endswith(".T")]
+df_us = df_results[~df_results["銘柄コード"].str.endswith(".T")]
+
+# =========================
+# 🇯🇵 日本株 / 🇺🇸 米国株 タブ表示
+# =========================
+tab_jp, tab_us = st.tabs(["🇯🇵 日本株（スコア50以上）", "🇺🇸 米国株（スコア50以上）"])
+
+# -------------------------
+# 🇯🇵 日本株
+# -------------------------
+with tab_jp:
+    st.header("🇯🇵 日本株（スコア50以上）")
+    st.dataframe(df_jp, use_container_width=True)
+
+    st.header("🔥 日本株：反発確度スコア上位5")
+    for idx, row in df_jp.head(5).iterrows():
+        st.subheader(f"{row['銘柄名']}（{row['銘柄コード']}）")
+        st.write(f"判定：**{row['判定']}**")
+        st.write(f"スコア：**{row['反発確度スコア']}点**")
+        st.write(f"終値：{row['終値']} / 前日比：{row['前日比']}（{row['前日比率(%)']}%）")
+        st.write(f"RSI：{row['RSI']} / MACD：{row['MACD']} / Signal：{row['Signal']}")
+        st.write("---")
+
+    if len(df_jp) > 0:
+        st.header("📈 日本株チャート")
+        selected_name = st.selectbox("銘柄を選択：", df_jp["銘柄名"])
+        ticker = df_jp[df_jp["銘柄名"] == selected_name]["銘柄コード"].iloc[0]
+        df_plot = chart_data[ticker]
+
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.plot(df_plot.index, df_plot["Close"], label="終値")
+        ax.plot(df_plot.index, df_plot["25MA"], label="25MA", linestyle="--")
+        ax.plot(df_plot.index, df_plot["High20"], label="ボックス上限", linestyle=":")
+        ax.plot(df_plot.index, df_plot["Low20"], label="ボックス下限", linestyle=":")
+        ax.set_title(f"{selected_name}（{ticker}）")
+        ax.legend()
+        ax.grid(True)
+        st.pyplot(fig)
+
+# -------------------------
+# 🇺🇸 米国株
+# -------------------------
+with tab_us:
+    st.header("🇺🇸 米国株（スコア50以上）")
+    st.dataframe(df_us, use_container_width=True)
+
+    st.header("🔥 米国株：反発確度スコア上位5")
+    for idx, row in df_us.head(5).iterrows():
+        st.subheader(f"{row['銘柄名']}（{row['銘柄コード']}）")
+        st.write(f"判定：**{row['判定']}**")
+        st.write(f"スコア：**{row['反発確度スコア']}点**")
+        st.write(f"終値：{row['終値']} / 前日比：{row['前日比']}（{row['前日比率(%)']}%）")
+        st.write(f"RSI：{row['RSI']} / MACD：{row['MACD']} / Signal：{row['Signal']}")
+        st.write("---")
+
+    if len(df_us) > 0:
+        st.header("📈 米国株チャート")
+        selected_name = st.selectbox("銘柄を選択：", df_us["銘柄名"])
+        ticker = df_us[df_us["銘柄名"] == selected_name]["銘柄コード"].iloc[0]
+        df_plot = chart_data[ticker]
+
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.plot(df_plot.index, df_plot["Close"], label="終値")
+        ax.plot(df_plot.index, df_plot["25MA"], label="25MA", linestyle="--")
+        ax.plot(df_plot.index, df_plot["High20"], label="ボックス上限", linestyle=":")
+        ax.plot(df_plot.index, df_plot["Low20"], label="ボックス下限", linestyle=":")
+        ax.set_title(f"{selected_name}（{ticker}）")
+        ax.legend()
+        ax.grid(True)
+        st.pyplot(fig)
