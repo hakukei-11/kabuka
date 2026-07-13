@@ -11,7 +11,6 @@ from tickers import TICKERS
 # =========================
 # 日本語フォント設定（Streamlit Cloud用）
 # =========================
-# リポジトリ内に fonts/ipaexg.ttf を置いておくこと
 font_path = "./fonts/ipaexg.ttf"
 fm.fontManager.addfont(font_path)
 matplotlib.rc('font', family='IPAexGothic')
@@ -132,15 +131,21 @@ def analyze_tickers():
             latest_signal
         )
 
-        # 判定文字（上書き防止）
+        # =========================
+        # 複数判定を同時に表示する（修正版）
+        # =========================
+        judges = []
+
+        if abs(deviation_ma) <= THRESHOLD:
+            judges.append("25MAタッチ（反発候補）")
+
+        if box_top_touch:
+            judges.append("ボックス上限タッチ（天井候補）")
+
         if box_bottom_touch:
-            judge = "ボックス下限タッチ（底候補）"
-        elif box_top_touch:
-            judge = "ボックス上限タッチ（天井候補）"
-        elif abs(deviation_ma) <= THRESHOLD:
-            judge = "25MAタッチ（反発候補）"
-        else:
-            judge = "判定なし"
+            judges.append("ボックス下限タッチ（底候補）")
+
+        judge = "・".join(judges) if judges else "判定なし"
 
         results.append({
             "銘柄コード": ticker,
