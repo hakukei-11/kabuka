@@ -109,7 +109,6 @@ def analyze_all():
             continue
 
         if df.empty or len(df) < 2:
-            # データが少なすぎる場合はスキップ
             continue
 
         df = df.ffill()
@@ -127,17 +126,4 @@ def analyze_all():
 
         latest_ma = df["25MA"].iloc[-1]
         latest_high20 = df["High20"].iloc[-1]
-        latest_low20 = df["Low20"].iloc[-1]
-
-        deviation_ma = ((latest_close - latest_ma) / latest_ma) * 100
-
-        box_top_touch = abs(latest_close - latest_high20) <= (latest_high20 * THRESHOLD / 100)
-        box_bottom_touch = abs(latest_close - latest_low20) <= (latest_low20 * THRESHOLD / 100)
-
-        # RSI
-        df["RSI"] = calc_rsi(df["Close"])
-        latest_rsi = df["RSI"].iloc[-1]
-
-        # MACD
-        df["MACD"], df["Signal"] = calc_macd(df["Close"])
-        latest_macd = df["MACD"].iloc[-1
+        latest_low20 = df
