@@ -1,15 +1,16 @@
 # update_checker.py
+# 200銘柄（日本100＋米国100）対応版
 import yfinance as yf
 import json
 import requests
 import os
 from datetime import datetime
+from tickers import TICKERS   # ← 200銘柄を読み込む
 
 LINE_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
 LINE_URL = "https://api.line.me/v2/bot/message/push"
 USER_ID = "U889b3c025bd9a29b4651833d39a4f7a6"
 
-TICKERS = ["7974.T", "6501.T", "AAPL", "MSFT"]
 THRESHOLD = 1.0  # ±1%以内をタッチ判定
 
 
@@ -20,12 +21,15 @@ def send_line(message: str):
         "Authorization": f"Bearer {LINE_TOKEN}"
     }
     data = {"to": USER_ID, "messages": [{"type": "text", "text": message}]}
-    response = requests.post(LINE_URL, headers=headers, json=data)
 
-    if response.status_code != 200:
-        print(f"LINE送信エラー: {response.status_code} - {response.text}")
-    else:
-        print("LINE送信成功")
+    try:
+        response = requests.post(LINE_URL, headers=headers, json=data)
+        if response.status_code != 200:
+            print(f"LINE送信エラー: {response.status_code} - {response.text}")
+        else:
+            print("LINE送信成功")
+    except Exception as e:
+        print(f"LINE送信例外: {e}")
 
 
 def calc_rsi(series, period=14):
@@ -61,7 +65,7 @@ def calc_score(is_25ma_touch, is_box_bottom_touch, rsi, macd, signal):
     return score
 
 
-def get_analysis(ticker: str):
+def analyze_ticker(ticker: str):
     """終値・スコア・判定文字をまとめて返す"""
     try:
         df = yf.Ticker(ticker).history(period="6mo").ffill()
@@ -90,7 +94,7 @@ def get_analysis(ticker: str):
 
     deviation_ma = ((latest_close - latest_ma) / latest_ma) * 100
 
-    # 判定
+    # 判定文字（複数対応）
     judges = []
 
     if abs(deviation_ma) <= THRESHOLD:
@@ -125,13 +129,15 @@ except FileNotFoundError:
 
 updated_list = []
 
-for ticker in TICKERS:
-    result = get_analysis(ticker)
+# 200銘柄をループ
+for ticker, name in TICKERS.items():
+    result = analyze_ticker(ticker)
     if result is None:
         continue
 
     new_close, score, judge = result
 
+    # 初回登録
     if ticker not in status:
         status[ticker] = {
             "last_close": new_close,
@@ -140,16 +146,17 @@ for ticker in TICKERS:
         }
         continue
 
-    # 終値が変わったか判定
+    # 終値更新判定
     if abs(new_close - status[ticker]["last_close"]) > 0.01:
         status[ticker]["updated"] = True
         status[ticker]["last_update_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         status[ticker]["last_close"] = new_close
 
-        # 🔥 スコア50以上の銘柄だけ通知（判定文字も含める）
+        # 🔥 スコア50以上の銘柄のみ通知（判定文字含む）
         if score >= 50:
             updated_list.append(
-                f"{ticker} 終値更新 → {new_close}\n"
+                f"{name}（{ticker}）\n"
+                f"終値更新：{new_close}\n"
                 f"判定：{judge}\n"
                 f"反発確度スコア：{score}"
             )
@@ -157,19 +164,20 @@ for ticker in TICKERS:
         status[ticker]["updated"] = False
 
 
-# JSON保存（例外処理付き）
+# JSON保存
 try:
     with open("update_status.json", "w") as f:
         json.dump(status, f, indent=4, ensure_ascii=False)
 except Exception as e:
     print(f"JSON保存エラー: {e}")
-    exit(0)
+    # GitHub Actions を落とさない
+    pass
 
 
-# LINE通知（例外処理付き）
+# LINE通知
 try:
     if updated_list:
         send_line("\n\n".join(updated_list))
 except Exception as e:
     print(f"LINE通知エラー: {e}")
-    exit(0)
+    pass
