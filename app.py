@@ -70,7 +70,7 @@ def calc_macd(series):
     signal = macd.ewm(span=9, adjust=False).mean()
     return macd, signal
 
-# --- 改善版スコア計算（あなたの要望を反映） ---
+# --- スコア計算（詳細版） ---
 def calc_score(
     is_25ma_touch,
     is_box_bottom_touch,
@@ -82,23 +82,23 @@ def calc_score(
 ):
     score = 0
 
-    # --- 25MAタッチの詳細化 ---
+    # 25MAタッチの詳細化
     if is_25ma_touch:
         if close_today > close_yesterday:
             score += 40   # 上昇傾向
         elif close_today < close_yesterday:
             score += 20   # 下降傾向
         else:
-            score += 30   # 横ばい（従来）
+            score += 30   # 横ばい
 
-    # --- ボックス下限タッチの詳細化 ---
+    # ボックス下限タッチの詳細化
     if is_box_bottom_touch:
         if close_today > close_yesterday:
             score += 40   # 反発傾向
         else:
-            score += 20   # 下落継続でも一応タッチ
+            score += 20   # 下落継続でもタッチ
 
-    # --- RSI ---
+    # RSI
     if rsi <= 25:
         score += 25
     elif rsi <= 30:
@@ -106,7 +106,7 @@ def calc_score(
     elif rsi <= 40:
         score += 10
 
-    # --- MACD ---
+    # MACD
     if macd > signal:
         if (macd - signal) < 0.1:
             score += 30   # 上抜け直後
@@ -115,7 +115,6 @@ def calc_score(
     else:
         if (signal - macd) < 0.1:
             score += 5    # 下抜け直後
-        # 下抜け継続は加点なし
 
     return score
 
@@ -177,7 +176,7 @@ def analyze_all():
         latest_macd = df["MACD"].iloc[-1]
         latest_signal = df["Signal"].iloc[-1]
 
-        # スコア（改善版）
+        # スコア
         score = calc_score(
             abs(deviation_ma) <= THRESHOLD,
             box_bottom_touch,
@@ -188,16 +187,60 @@ def analyze_all():
             previous_close
         )
 
-        # 判定文字
+        # 判定文字（詳細版）
         judges = []
-        if abs(deviation_ma) <= THRESHOLD:
-            judges.append("25MAタッチ（反発候補）")
-        if box_top_touch:
-            judges.append("ボックス上限タッチ（天井候補）")
-        if box_bottom_touch:
-            judges.append("ボックス下限タッチ（底候補）")
 
-        judge = "・".join(judges) if judges else "判定なし"
+        # 25MAタッチ＋トレンド
+        if abs(deviation_ma) <= THRESHOLD:
+            if latest_close > previous_close:
+                judges.append("25MAタッチ＋終値上昇（反発強候補）")
+            elif latest_close < previous_close:
+                judges.append("25MAタッチ＋終値下落（反発弱候補・注意）")
+            else:
+                judges.append("25MAタッチ＋終値横ばい（様子見）")
+
+        # ボックス上限・下限＋トレンド
+        if box_top_touch:
+            if latest_close > previous_close:
+                judges.append("ボックス上限タッチ＋上昇（上抜け警戒）")
+            elif latest_close < previous_close:
+                judges.append("ボックス上限タッチ＋下落（天井候補）")
+            else:
+                judges.append("ボックス上限タッチ（天井圏）")
+
+        if box_bottom_touch:
+            if latest_close > previous_close:
+                judges.append("ボックス下限タッチ＋上昇（底打ち反発候補）")
+            elif latest_close < previous_close:
+                judges.append("ボックス下限タッチ＋下落（下抜け警戒）")
+            else:
+                judges.append("ボックス下限タッチ（底圏）")
+
+        # RSI 状態
+        if latest_rsi <= 25:
+            judges.append(f"RSI {latest_rsi:.1f}（強い売られ過ぎ）")
+        elif latest_rsi <= 30:
+            judges.append(f"RSI {latest_rsi:.1f}（売られ過ぎ）")
+        elif latest_rsi <= 40:
+            judges.append(f"RSI {latest_rsi:.1f}（やや弱い）")
+        elif latest_rsi >= 70:
+            judges.append(f"RSI {latest_rsi:.1f}（買われ過ぎ・警戒）")
+
+        # MACD 状態
+        if latest_macd > latest_signal:
+            judges.append("MACDゴールデンクロス（上昇トレンド寄り）")
+        elif latest_macd < latest_signal:
+            judges.append("MACDデッドクロス（下落トレンド寄り）")
+
+        # スコアのコメント
+        if score >= 80:
+            judges.append(f"総合スコア {score}点（強い反発候補）")
+        elif score >= 60:
+            judges.append(f"総合スコア {score}点（反発候補）")
+        else:
+            judges.append(f"総合スコア {score}点（反発余地あり）")
+
+        judge = " / ".join(judges) if judges else "判定なし"
 
         # スコア50以上のみ採用
         if score >= 50:
