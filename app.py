@@ -1,4 +1,3 @@
-# app.py（高速版・200銘柄対応・安全化・終値更新は日本株/米株のみ）
 import streamlit as st
 import yfinance as yf
 import pandas as pd
@@ -53,7 +52,6 @@ if us_ticker in update_status:
 else:
     st.info("米株：データなし")
 
-
 # --- RSI計算 ---
 def calc_rsi(series, period=14):
     delta = series.diff()
@@ -64,7 +62,6 @@ def calc_rsi(series, period=14):
     rsi = 100 - (100 / (1 + (ma_up / ma_down)))
     return rsi
 
-
 # --- MACD計算 ---
 def calc_macd(series):
     ema12 = series.ewm(span=12, adjust=False).mean()
@@ -73,22 +70,54 @@ def calc_macd(series):
     signal = macd.ewm(span=9, adjust=False).mean()
     return macd, signal
 
-
-# --- スコア計算 ---
-def calc_score(is_25ma_touch, is_box_bottom_touch, rsi, macd, signal):
+# --- 改善版スコア計算（あなたの要望を反映） ---
+def calc_score(
+    is_25ma_touch,
+    is_box_bottom_touch,
+    rsi,
+    macd,
+    signal,
+    close_today,
+    close_yesterday
+):
     score = 0
+
+    # --- 25MAタッチの詳細化 ---
     if is_25ma_touch:
-        score += 30
+        if close_today > close_yesterday:
+            score += 40   # 上昇傾向
+        elif close_today < close_yesterday:
+            score += 20   # 下降傾向
+        else:
+            score += 30   # 横ばい（従来）
+
+    # --- ボックス下限タッチの詳細化 ---
     if is_box_bottom_touch:
-        score += 30
-    if rsi <= 30:
+        if close_today > close_yesterday:
+            score += 40   # 反発傾向
+        else:
+            score += 20   # 下落継続でも一応タッチ
+
+    # --- RSI ---
+    if rsi <= 25:
+        score += 25
+    elif rsi <= 30:
         score += 20
     elif rsi <= 40:
         score += 10
-    if macd > signal:
-        score += 20
-    return score
 
+    # --- MACD ---
+    if macd > signal:
+        if (macd - signal) < 0.1:
+            score += 30   # 上抜け直後
+        else:
+            score += 20   # 上抜け継続
+    else:
+        if (signal - macd) < 0.1:
+            score += 5    # 下抜け直後
+        # 下抜け継続は加点なし
+
+    return score
 
 @st.cache_data(ttl=3600)
 def analyze_all():
@@ -148,13 +177,15 @@ def analyze_all():
         latest_macd = df["MACD"].iloc[-1]
         latest_signal = df["Signal"].iloc[-1]
 
-        # スコア
+        # スコア（改善版）
         score = calc_score(
             abs(deviation_ma) <= THRESHOLD,
             box_bottom_touch,
             latest_rsi,
             latest_macd,
-            latest_signal
+            latest_signal,
+            latest_close,
+            previous_close
         )
 
         # 判定文字
@@ -183,10 +214,9 @@ def analyze_all():
                 "反発確度スコア": score
             })
 
-            chart_data[ticker] = df
+        chart_data[ticker] = df
 
     return results, chart_data
-
 
 # --- 実行 ---
 st.write("✅ analyze_all() 実行開始")
