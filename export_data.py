@@ -1,9 +1,10 @@
-# export_data.py（完全版）
+# export_data.py（CSV保存対応版）
 import yfinance as yf
 import json
 import requests
 import os
 from datetime import datetime
+import pandas as pd
 from tickers import TICKERS
 
 LINE_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
@@ -20,8 +21,7 @@ def send_line(message: str):
     }
     data = {"to": USER_ID, "messages": [{"type": "text", "text": message}]}
     try:
-        response = requests.post(LINE_URL, headers=headers, json=data)
-        print(f"LINE送信ステータス: {response.status_code}")
+        requests.post(LINE_URL, headers=headers, json=data)
     except Exception as e:
         print(f"LINE送信エラー: {e}")
 
@@ -102,46 +102,38 @@ def analyze(ticker):
         latest_signal
     )
 
-    return latest_close, score, judge
+    return {
+        "銘柄コード": ticker,
+        "銘柄名": TICKERS[ticker],
+        "終値": round(latest_close, 1),
+        "RSI": round(latest_rsi, 1),
+        "MACD": round(latest_macd, 3),
+        "Signal": round(latest_signal, 3),
+        "判定": judge,
+        "反発確度スコア": score
+    }
 
 
-try:
-    with open("update_status.json", "r") as f:
-        status = json.load(f)
-except FileNotFoundError:
-    status = {}
+# === 全銘柄分析 ===
+results = []
+for ticker in TICKERS.keys():
+    res = analyze(ticker)
+    if res:
+        results.append(res)
 
-updated_list = []
+# === CSV保存 ===
+today = datetime.now()
+year = today.strftime("%Y")
+month = today.strftime("%m")
+day = today.strftime("%d")
+folder_path = f"data/{year}/{month}"
+os.makedirs(folder_path, exist_ok=True)
+file_path = f"{folder_path}/data_{year}{month}{day}.csv"
 
-for ticker, name in TICKERS.items():
-    result = analyze(ticker)
-    if result is None:
-        continue
+df = pd.DataFrame(results)
+df.to_csv(file_path, index=False, encoding="utf-8-sig")
 
-    new_close, score, judge = result
+print(f"✅ CSV保存完了: {file_path}")
 
-    if ticker not in status:
-        status[ticker] = {
-            "last_close": new_close,
-            "updated": False,
-            "last_update_time": None
-        }
-        continue
-
-    if abs(new_close - status[ticker]["last_close"]) > 0.01:
-        status[ticker]["updated"] = True
-        status[ticker]["last_update_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        status[ticker]["last_close"] = new_close
-
-        if score >= 50:
-            updated_list.append(
-                f"{name}（{ticker}）\n終値更新：{new_close}\n判定：{judge}\n反発確度スコア：{score}"
-            )
-    else:
-        status[ticker]["updated"] = False
-
-with open("update_status.json", "w", encoding="utf-8") as f:
-    json.dump(status, f, indent=4, ensure_ascii=False)
-
-if updated_list:
-    send_line("\n\n".join(updated_list))
+# === LINE通知 ===
+send_line(f"✅ 株価分析CSVを保存しました。\n{file_path}")
