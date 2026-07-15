@@ -1,112 +1,112 @@
 {
     "7974.T": {
         "last_close": 7050.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:07"
     },
     "6501.T": {
         "last_close": 4802.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:08"
     },
     "AAPL": {
-        "last_close": 327.5400085449219,
+        "last_close": 327.5,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:39"
+        "last_update_time": "2026-07-15 21:32:27"
     },
     "MSFT": {
-        "last_close": 396.07000732421875,
+        "last_close": 395.6300048828125,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:39"
+        "last_update_time": "2026-07-15 21:32:27"
     },
     "7203.T": {
         "last_close": 2839.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:04"
     },
     "6758.T": {
         "last_close": 3383.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:04"
     },
     "8035.T": {
         "last_close": 71130.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:04"
     },
     "6861.T": {
         "last_close": 75390.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:05"
     },
     "9983.T": {
         "last_close": 79790.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:05"
     },
     "9432.T": {
         "last_close": 150.1999969482422,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:05"
     },
     "9433.T": {
         "last_close": 2835.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:06"
     },
     "8306.T": {
         "last_close": 3600.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:06"
     },
     "8316.T": {
         "last_close": 6967.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:06"
     },
     "4502.T": {
         "last_close": 5327.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:07"
     },
     "6098.T": {
         "last_close": 12660.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:07"
     },
     "9984.T": {
         "last_close": 6574.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:08"
     },
     "8058.T": {
         "last_close": 4496.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:08"
     },
     "8001.T": {
         "last_close": 1904.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:09"
     },
     "8053.T": {
         "last_close": 1563.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:09"
     },
     "8766.T": {
         "last_close": 7720.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:10"
     },
     "4661.T": {
         "last_close": 2745.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:10"
     },
     "6902.T": {
         "last_close": 1941.5,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:10"
     },
     "6981.T": {
@@ -116,42 +116,42 @@
     },
     "6594.T": {
         "last_close": 2608.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:11"
     },
     "7741.T": {
         "last_close": 25570.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:11"
     },
     "9101.T": {
         "last_close": 5506.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:12"
     },
     "9107.T": {
         "last_close": 2657.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:12"
     },
     "9104.T": {
         "last_close": 5500.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:12"
     },
     "5411.T": {
         "last_close": 1666.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:13"
     },
     "5401.T": {
         "last_close": 567.5999755859375,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:13"
     },
     "4503.T": {
         "last_close": 2146.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:13"
     },
     "2503.T": {
@@ -161,242 +161,242 @@
     },
     "2502.T": {
         "last_close": 1604.5,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:14"
     },
     "2914.T": {
         "last_close": 6116.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:14"
     },
     "3382.T": {
         "last_close": 1994.5,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:15"
     },
     "3092.T": {
         "last_close": 1185.5,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:15"
     },
     "3289.T": {
         "last_close": 1320.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:15"
     },
     "3407.T": {
         "last_close": 1867.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:16"
     },
     "3401.T": {
         "last_close": 1683.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:16"
     },
     "3861.T": {
         "last_close": 825.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:17"
     },
     "3863.T": {
         "last_close": 1360.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:17"
     },
     "4063.T": {
         "last_close": 7471.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:17"
     },
     "4188.T": {
         "last_close": 1203.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:18"
     },
     "4208.T": {
         "last_close": 3216.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:18"
     },
     "4452.T": {
         "last_close": 3279.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:18"
     },
     "4506.T": {
         "last_close": 1342.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:19"
     },
     "4519.T": {
         "last_close": 7241.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:19"
     },
     "4523.T": {
         "last_close": 4376.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:20"
     },
     "4543.T": {
         "last_close": 2233.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:20"
     },
     "4578.T": {
         "last_close": 11000.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:20"
     },
     "4901.T": {
         "last_close": 3648.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:21"
     },
     "4911.T": {
         "last_close": 2943.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:21"
     },
     "5020.T": {
         "last_close": 1264.5,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:21"
     },
     "5108.T": {
         "last_close": 3647.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:22"
     },
     "5201.T": {
         "last_close": 6422.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:22"
     },
     "5214.T": {
         "last_close": 5813.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:23"
     },
     "5332.T": {
         "last_close": 7973.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:23"
     },
     "5406.T": {
         "last_close": 1917.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:23"
     },
     "5713.T": {
         "last_close": 7329.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:24"
     },
     "5802.T": {
         "last_close": 2458.5,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:24"
     },
     "5803.T": {
         "last_close": 4800.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:25"
     },
     "5901.T": {
         "last_close": 4005.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:25"
     },
     "6099.T": {
         "last_close": 761.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:26"
     },
     "6301.T": {
         "last_close": 6366.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:26"
     },
     "6367.T": {
         "last_close": 24900.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:26"
     },
     "6471.T": {
         "last_close": 1124.5,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:26"
     },
     "6473.T": {
         "last_close": 2077.5,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:27"
     },
     "6503.T": {
         "last_close": 5592.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:27"
     },
     "6504.T": {
         "last_close": 12760.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:28"
     },
     "6506.T": {
         "last_close": 5436.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:28"
     },
     "6586.T": {
         "last_close": 5598.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:28"
     },
     "6645.T": {
         "last_close": 5632.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:28"
     },
     "6674.T": {
         "last_close": 5966.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:29"
     },
     "6723.T": {
         "last_close": 4381.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:29"
     },
     "6752.T": {
         "last_close": 4173.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:29"
     },
     "6754.T": {
         "last_close": 4033.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:30"
     },
     "6762.T": {
         "last_close": 3234.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:30"
     },
     "6770.T": {
         "last_close": 2120.5,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:30"
     },
     "6841.T": {
         "last_close": 5470.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:31"
     },
     "6857.T": {
         "last_close": 29775.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:31"
     },
     "6901.T": {
@@ -406,567 +406,567 @@
     },
     "6954.T": {
         "last_close": 6839.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:32"
     },
     "6971.T": {
         "last_close": 3660.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:32"
     },
     "7011.T": {
         "last_close": 3746.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:33"
     },
     "7012.T": {
         "last_close": 2690.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:33"
     },
     "7201.T": {
         "last_close": 305.1000061035156,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:33"
     },
     "7267.T": {
         "last_close": 1513.5,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:34"
     },
     "7270.T": {
         "last_close": 2485.5,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:34"
     },
     "7731.T": {
         "last_close": 2282.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:34"
     },
     "7733.T": {
         "last_close": 1794.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:35"
     },
     "7751.T": {
         "last_close": 4388.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:35"
     },
     "8031.T": {
         "last_close": 4698.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:35"
     },
     "8113.T": {
         "last_close": 963.7999877929688,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:36"
     },
     "8267.T": {
         "last_close": 1412.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:36"
     },
     "8308.T": {
         "last_close": 2370.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:36"
     },
     "8411.T": {
         "last_close": 8480.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:37"
     },
     "8591.T": {
         "last_close": 6430.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:37"
     },
     "8769.T": {
         "last_close": 511.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:37"
     },
     "8802.T": {
         "last_close": 4206.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:38"
     },
     "9020.T": {
         "last_close": 3564.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:38"
     },
     "9022.T": {
         "last_close": 3709.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:38"
     },
     "9021.T": {
         "last_close": 2991.0,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:49:38"
     },
     "AMZN": {
-        "last_close": 254.85499572753906,
+        "last_close": 254.9600067138672,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:39"
+        "last_update_time": "2026-07-15 21:32:27"
     },
     "NVDA": {
-        "last_close": 209.50999450683594,
+        "last_close": 212.5,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:40"
+        "last_update_time": "2026-07-15 21:32:27"
     },
     "META": {
-        "last_close": 675.75,
+        "last_close": 681.3099975585938,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:40"
+        "last_update_time": "2026-07-15 21:32:27"
     },
     "GOOGL": {
-        "last_close": 371.418701171875,
+        "last_close": 370.9200134277344,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:40"
+        "last_update_time": "2026-07-15 21:32:27"
     },
     "GOOG": {
-        "last_close": 370.135009765625,
+        "last_close": 370.2099914550781,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:41"
+        "last_update_time": "2026-07-15 21:32:28"
     },
     "TSLA": {
-        "last_close": 398.2099914550781,
+        "last_close": 394.4599914550781,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:41"
+        "last_update_time": "2026-07-15 21:32:28"
     },
     "UNH": {
-        "last_close": 421.7799987792969,
+        "last_close": 418.5199890136719,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:42"
+        "last_update_time": "2026-07-15 21:32:28"
     },
     "XOM": {
-        "last_close": 143.0500030517578,
+        "last_close": 144.50999450683594,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:42"
+        "last_update_time": "2026-07-15 21:32:29"
     },
     "JNJ": {
-        "last_close": 247.9600067138672,
+        "last_close": 247.02000427246094,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:43"
+        "last_update_time": "2026-07-15 21:32:29"
     },
     "JPM": {
-        "last_close": 348.1400146484375,
+        "last_close": 346.9100036621094,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:43"
+        "last_update_time": "2026-07-15 21:32:29"
     },
     "V": {
-        "last_close": 358.32501220703125,
+        "last_close": 355.1400146484375,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:43"
+        "last_update_time": "2026-07-15 21:32:29"
     },
     "PG": {
-        "last_close": 148.08999633789062,
+        "last_close": 148.0500030517578,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:44"
+        "last_update_time": "2026-07-15 21:32:30"
     },
     "MA": {
-        "last_close": 536.2216796875,
+        "last_close": 535.2100219726562,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:44"
+        "last_update_time": "2026-07-15 21:32:30"
     },
     "HD": {
-        "last_close": 342.8599853515625,
+        "last_close": 341.44000244140625,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:45"
+        "last_update_time": "2026-07-15 21:32:30"
     },
     "CVX": {
-        "last_close": 179.5500030517578,
+        "last_close": 181.60000610351562,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:45"
+        "last_update_time": "2026-07-15 21:32:30"
     },
     "MRK": {
-        "last_close": 123.45500183105469,
+        "last_close": 123.61000061035156,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:45"
+        "last_update_time": "2026-07-15 21:32:30"
     },
     "ABBV": {
-        "last_close": 246.8300018310547,
+        "last_close": 244.11000061035156,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:46"
+        "last_update_time": "2026-07-15 21:32:31"
     },
     "PEP": {
-        "last_close": 136.10499572753906,
+        "last_close": 135.39999389648438,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:46"
+        "last_update_time": "2026-07-15 21:32:31"
     },
     "KO": {
-        "last_close": 82.9749984741211,
+        "last_close": 82.44999694824219,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:47"
+        "last_update_time": "2026-07-15 21:32:31"
     },
     "AVGO": {
-        "last_close": 393.2099914550781,
+        "last_close": 394.2799987792969,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:47"
+        "last_update_time": "2026-07-15 21:32:31"
     },
     "COST": {
-        "last_close": 922.239990234375,
+        "last_close": 916.5399780273438,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:47"
+        "last_update_time": "2026-07-15 21:32:31"
     },
     "WMT": {
-        "last_close": 113.91719818115234,
+        "last_close": 112.52999877929688,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:48"
+        "last_update_time": "2026-07-15 21:32:32"
     },
     "BAC": {
-        "last_close": 61.55500030517578,
+        "last_close": 61.59000015258789,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:48"
+        "last_update_time": "2026-07-15 21:32:32"
     },
     "DIS": {
-        "last_close": 97.30000305175781,
+        "last_close": 97.1500015258789,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:48"
+        "last_update_time": "2026-07-15 21:32:32"
     },
     "MCD": {
-        "last_close": 267.0150146484375,
+        "last_close": 264.95001220703125,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:49"
+        "last_update_time": "2026-07-15 21:32:32"
     },
     "CSCO": {
-        "last_close": 111.86000061035156,
+        "last_close": 111.7699966430664,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:49"
+        "last_update_time": "2026-07-15 21:32:32"
     },
     "PFE": {
-        "last_close": 24.737499237060547,
+        "last_close": 24.81999969482422,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:50"
+        "last_update_time": "2026-07-15 21:32:33"
     },
     "TMO": {
-        "last_close": 538.2349853515625,
+        "last_close": 535.2899780273438,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:50"
+        "last_update_time": "2026-07-15 21:32:33"
     },
     "ACN": {
-        "last_close": 138.0,
+        "last_close": 137.02000427246094,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:50"
+        "last_update_time": "2026-07-15 21:32:33"
     },
     "DHR": {
-        "last_close": 200.92999267578125,
+        "last_close": 200.7899932861328,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:51"
+        "last_update_time": "2026-07-15 21:32:33"
     },
     "LIN": {
-        "last_close": 516.094970703125,
+        "last_close": 514.1500244140625,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:51"
+        "last_update_time": "2026-07-15 21:32:33"
     },
     "WFC": {
-        "last_close": 86.93499755859375,
+        "last_close": 87.51000213623047,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:52"
+        "last_update_time": "2026-07-15 21:32:34"
     },
     "TXN": {
-        "last_close": 300.989990234375,
+        "last_close": 301.19000244140625,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:52"
+        "last_update_time": "2026-07-15 21:32:34"
     },
     "UPS": {
-        "last_close": 114.33679962158203,
+        "last_close": 112.94000244140625,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:52"
+        "last_update_time": "2026-07-15 21:32:34"
     },
     "NEE": {
-        "last_close": 88.73999786376953,
+        "last_close": 89.0999984741211,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:53"
+        "last_update_time": "2026-07-15 21:32:34"
     },
     "RTX": {
-        "last_close": 195.1699981689453,
+        "last_close": 195.88999938964844,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:53"
+        "last_update_time": "2026-07-15 21:32:35"
     },
     "IBM": {
-        "last_close": 213.45010375976562,
+        "last_close": 211.1999969482422,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:54"
+        "last_update_time": "2026-07-15 21:32:35"
     },
     "INTC": {
-        "last_close": 102.18000030517578,
+        "last_close": 102.98999786376953,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:54"
+        "last_update_time": "2026-07-15 21:32:35"
     },
     "AMD": {
-        "last_close": 530.1901245117188,
+        "last_close": 529.1400146484375,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:54"
+        "last_update_time": "2026-07-15 21:32:35"
     },
     "NFLX": {
-        "last_close": 73.70999908447266,
+        "last_close": 73.68000030517578,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:55"
+        "last_update_time": "2026-07-15 21:32:35"
     },
     "QCOM": {
-        "last_close": 178.14999389648438,
+        "last_close": 177.97999572753906,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:55"
+        "last_update_time": "2026-07-15 21:32:35"
     },
     "SBUX": {
-        "last_close": 106.33999633789062,
+        "last_close": 105.11000061035156,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:55"
+        "last_update_time": "2026-07-15 21:32:36"
     },
     "AMAT": {
-        "last_close": 578.3699951171875,
+        "last_close": 579.4299926757812,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:56"
+        "last_update_time": "2026-07-15 21:32:36"
     },
     "LOW": {
-        "last_close": 210.81500244140625,
+        "last_close": 209.66000366210938,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:56"
+        "last_update_time": "2026-07-15 21:32:36"
     },
     "CAT": {
-        "last_close": 905.39501953125,
+        "last_close": 914.2999877929688,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:56"
+        "last_update_time": "2026-07-15 21:32:36"
     },
     "BLK": {
-        "last_close": 1087.449951171875,
+        "last_close": 1093.4000244140625,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:57"
+        "last_update_time": "2026-07-15 21:32:37"
     },
     "GE": {
-        "last_close": 357.6549987792969,
+        "last_close": 360.3500061035156,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:57"
+        "last_update_time": "2026-07-15 21:32:37"
     },
     "HON": {
-        "last_close": 222.5050048828125,
+        "last_close": 222.83999633789062,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:58"
+        "last_update_time": "2026-07-15 21:32:37"
     },
     "BA": {
-        "last_close": 219.47000122070312,
+        "last_close": 218.1199951171875,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:58"
+        "last_update_time": "2026-07-15 21:32:37"
     },
     "MDT": {
-        "last_close": 81.05999755859375,
+        "last_close": 80.47000122070312,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:58"
+        "last_update_time": "2026-07-15 21:32:38"
     },
     "SPGI": {
-        "last_close": 444.2900085449219,
+        "last_close": 444.4800109863281,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:59"
+        "last_update_time": "2026-07-15 21:32:38"
     },
     "GS": {
-        "last_close": 1141.449951171875,
+        "last_close": 1152.0699462890625,
         "updated": true,
-        "last_update_time": "2026-07-15 17:49:59"
+        "last_update_time": "2026-07-15 21:32:38"
     },
     "PLD": {
-        "last_close": 143.36000061035156,
+        "last_close": 143.4199981689453,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:00"
+        "last_update_time": "2026-07-15 21:32:38"
     },
     "ADBE": {
-        "last_close": 223.60499572753906,
+        "last_close": 224.55999755859375,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:00"
+        "last_update_time": "2026-07-15 21:32:38"
     },
     "NOW": {
-        "last_close": 104.63999938964844,
+        "last_close": 104.7300033569336,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:00"
+        "last_update_time": "2026-07-15 21:32:38"
     },
     "BKNG": {
-        "last_close": 180.84500122070312,
+        "last_close": 182.8000030517578,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:00"
+        "last_update_time": "2026-07-15 21:32:39"
     },
     "ISRG": {
-        "last_close": 390.55999755859375,
+        "last_close": 388.9700012207031,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:01"
+        "last_update_time": "2026-07-15 21:32:39"
     },
     "LMT": {
-        "last_close": 514.9450073242188,
+        "last_close": 514.4600219726562,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:01"
+        "last_update_time": "2026-07-15 21:32:39"
     },
     "EL": {
-        "last_close": 82.86499786376953,
+        "last_close": 82.30999755859375,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:02"
+        "last_update_time": "2026-07-15 21:32:39"
     },
     "MO": {
-        "last_close": 70.9000015258789,
+        "last_close": 70.5199966430664,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:02"
+        "last_update_time": "2026-07-15 21:32:39"
     },
     "DE": {
-        "last_close": 588.02001953125,
+        "last_close": 589.47998046875,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:02"
+        "last_update_time": "2026-07-15 21:32:40"
     },
     "C": {
-        "last_close": 134.375,
+        "last_close": 134.88999938964844,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:03"
+        "last_update_time": "2026-07-15 21:32:40"
     },
     "T": {
-        "last_close": 21.395000457763672,
+        "last_close": 21.43000030517578,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:04"
+        "last_update_time": "2026-07-15 21:32:41"
     },
     "VZ": {
         "last_close": 42.82500076293945,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-15 17:50:04"
     },
     "FDX": {
-        "last_close": 318.0799865722656,
+        "last_close": 313.4200134277344,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:05"
+        "last_update_time": "2026-07-15 21:32:41"
     },
     "SO": {
-        "last_close": 95.08999633789062,
+        "last_close": 94.5999984741211,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:05"
+        "last_update_time": "2026-07-15 21:32:41"
     },
     "DUK": {
-        "last_close": 125.0199966430664,
+        "last_close": 124.33999633789062,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:05"
+        "last_update_time": "2026-07-15 21:32:42"
     },
     "AEP": {
-        "last_close": 133.4199981689453,
+        "last_close": 132.5,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:06"
+        "last_update_time": "2026-07-15 21:32:42"
     },
     "REGN": {
-        "last_close": 662.27001953125,
+        "last_close": 664.4500122070312,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:06"
+        "last_update_time": "2026-07-15 21:32:42"
     },
     "GILD": {
-        "last_close": 132.05499267578125,
+        "last_close": 131.6999969482422,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:06"
+        "last_update_time": "2026-07-15 21:32:42"
     },
     "VRTX": {
-        "last_close": 477.56500244140625,
+        "last_close": 477.0799865722656,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:07"
+        "last_update_time": "2026-07-15 21:32:42"
     },
     "CSX": {
-        "last_close": 49.28499984741211,
+        "last_close": 49.43000030517578,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:07"
+        "last_update_time": "2026-07-15 21:32:42"
     },
     "NSC": {
-        "last_close": 326.82501220703125,
+        "last_close": 328.5400085449219,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:07"
+        "last_update_time": "2026-07-15 21:32:43"
     },
     "BDX": {
-        "last_close": 155.5850067138672,
+        "last_close": 154.8800048828125,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:08"
+        "last_update_time": "2026-07-15 21:32:43"
     },
     "CL": {
-        "last_close": 91.95500183105469,
+        "last_close": 91.47000122070312,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:09"
+        "last_update_time": "2026-07-15 21:32:44"
     },
     "MNST": {
-        "last_close": 98.6500015258789,
+        "last_close": 97.56999969482422,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:09"
+        "last_update_time": "2026-07-15 21:32:44"
     },
     "KDP": {
-        "last_close": 30.610000610351562,
+        "last_close": 30.280000686645508,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:09"
+        "last_update_time": "2026-07-15 21:32:44"
     },
     "WM": {
-        "last_close": 233.82000732421875,
+        "last_close": 232.8000030517578,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:09"
+        "last_update_time": "2026-07-15 21:32:44"
     },
     "ADP": {
-        "last_close": 246.5800018310547,
+        "last_close": 247.47000122070312,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:10"
+        "last_update_time": "2026-07-15 21:32:44"
     },
     "ORCL": {
-        "last_close": 132.86500549316406,
+        "last_close": 132.49000549316406,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:10"
+        "last_update_time": "2026-07-15 21:32:44"
     },
     "CRM": {
-        "last_close": 167.0699005126953,
+        "last_close": 167.0,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:10"
+        "last_update_time": "2026-07-15 21:32:44"
     },
     "PANW": {
-        "last_close": 355.1199951171875,
+        "last_close": 354.0199890136719,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:11"
+        "last_update_time": "2026-07-15 21:32:45"
     },
     "FTNT": {
-        "last_close": 163.58999633789062,
+        "last_close": 164.50999450683594,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:11"
+        "last_update_time": "2026-07-15 21:32:45"
     },
     "HCA": {
-        "last_close": 380.2850036621094,
+        "last_close": 378.8500061035156,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:11"
+        "last_update_time": "2026-07-15 21:32:45"
     },
     "LRCX": {
-        "last_close": 330.9150085449219,
+        "last_close": 335.42999267578125,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:11"
+        "last_update_time": "2026-07-15 21:32:45"
     },
     "MU": {
-        "last_close": 911.47998046875,
+        "last_close": 904.280029296875,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:12"
+        "last_update_time": "2026-07-15 21:32:45"
     },
     "ZTS": {
-        "last_close": 74.57499694824219,
+        "last_close": 74.52999877929688,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:12"
+        "last_update_time": "2026-07-15 21:32:45"
     },
     "MAR": {
-        "last_close": 369.55999755859375,
+        "last_close": 369.04998779296875,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:13"
+        "last_update_time": "2026-07-15 21:32:45"
     },
     "ETN": {
-        "last_close": 410.3399963378906,
+        "last_close": 412.8599853515625,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:13"
+        "last_update_time": "2026-07-15 21:32:46"
     },
     "EMR": {
-        "last_close": 136.47000122070312,
+        "last_close": 136.25,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:13"
+        "last_update_time": "2026-07-15 21:32:46"
     },
     "ROST": {
-        "last_close": 226.47999572753906,
+        "last_close": 225.80999755859375,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:14"
+        "last_update_time": "2026-07-15 21:32:46"
     },
     "TJX": {
-        "last_close": 151.27000427246094,
+        "last_close": 150.97000122070312,
         "updated": true,
-        "last_update_time": "2026-07-15 17:50:14"
+        "last_update_time": "2026-07-15 21:32:46"
     }
 }
