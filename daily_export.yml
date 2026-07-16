@@ -36,7 +36,7 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add update_status.json
-          git add data/**/*.csv
+          # 新規フォルダも含めて add
+          git add -A
           git commit -m "Daily export CSV and update_status.json" || echo "No changes"
           git push
