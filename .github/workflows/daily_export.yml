@@ -1,10 +1,12 @@
-# .github/workflows/daily_export.yml（完全版）
 name: Daily Export
 
 on:
   schedule:
-    - cron: "0 23 * * *"   # 日本時間 AM8:00（UTC23:00）
+    - cron: "0 1 * * *"   # 日本時間 AM10:00（UTC 01:00）
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   export:
@@ -13,6 +15,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -30,10 +34,16 @@ jobs:
         run: |
           python export_data.py
 
-      - name: Commit update_status.json
+      - name: Debug file existence
+        run: |
+          ls -R data || echo "dataフォルダなし"
+
+      - name: Commit CSV and JSON
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
+          git add data -f  # ← dataフォルダを強制的にステージング
           git add update_status.json
-          git commit -m "Daily update" || echo "No changes"
+          git status
+          git commit -m "Daily export CSV and update_status.json" || echo "No changes"
           git push
