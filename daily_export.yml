@@ -44,5 +44,6 @@ jobs:
           git config user.email "github-actions@github.com"
           git add data -f  # ← dataフォルダを強制的にステージング
           git add update_status.json
+          git status
           git commit -m "Daily export CSV and update_status.json" || echo "No changes"
           git push
