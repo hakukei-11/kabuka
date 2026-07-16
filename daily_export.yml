@@ -16,7 +16,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: true  # ← push 権限を確実に保持
+          persist-credentials: true
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -34,10 +34,15 @@ jobs:
         run: |
           python export_data.py
 
+      - name: Debug file existence
+        run: |
+          ls -R data || echo "dataフォルダなし"
+
       - name: Commit CSV and JSON
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add -A  # ← 新規フォルダ・ファイルも含めてステージング
+          git add -A
+          git status
           git commit -m "Daily export CSV and update_status.json" || echo "No changes"
           git push
