@@ -516,7 +516,7 @@
     },
     "NVDA": {
         "last_close": 206.83999633789062,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-25 18:11:00"
     },
     "META": {
@@ -591,7 +591,7 @@
     },
     "ABBV": {
         "last_close": 259.3599853515625,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-25 18:11:06"
     },
     "PEP": {
@@ -661,7 +661,7 @@
     },
     "LIN": {
         "last_close": 512.280029296875,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-25 18:11:12"
     },
     "WFC": {
@@ -671,12 +671,12 @@
     },
     "TXN": {
         "last_close": 279.5799865722656,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-25 18:11:12"
     },
     "UPS": {
         "last_close": 114.79000091552734,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-25 18:11:13"
     },
     "NEE": {
@@ -741,7 +741,7 @@
     },
     "GE": {
         "last_close": 353.7300109863281,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-25 18:11:18"
     },
     "HON": {
@@ -756,7 +756,7 @@
     },
     "MDT": {
         "last_close": 83.20999908447266,
-        "updated": true,
+        "updated": false,
         "last_update_time": "2026-07-25 18:11:19"
     },
     "SPGI": {
