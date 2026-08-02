@@ -139,11 +139,13 @@ def create_records(
                         else "20日安値非タッチ"
                     ),
                     "RSI条件": get_rsi_band(rsi),
+                    "RSI": round(rsi, 2),
                     "MACD条件": (
                         "MACDがシグナル超え"
                         if macd > signal
                         else "MACDがシグナル以下"
                     ),
+                    "MACDがシグナル以下": macd <= signal,
                     "結果": result,
                     "到達日数": days_to_target,
                 }
@@ -172,6 +174,56 @@ def summarize(records: pd.DataFrame, group_column: str) -> list[dict]:
             }
         )
     return summaries
+
+
+def summarize_time_split_strategies(records: pd.DataFrame) -> dict:
+    """前半70%と後半30%で、候補条件の再現性を比較する。"""
+    trade_dates = sorted(records["取引日"].unique().tolist())
+    split_index = max(0, int(len(trade_dates) * 0.7) - 1)
+    split_date = trade_dates[split_index]
+
+    strategies = {
+        "全日（基準値）": pd.Series(True, index=records.index),
+        "RSI 40以下": records["RSI"] <= 40,
+        "RSI 30以下": records["RSI"] <= 30,
+        "RSI 25以下": records["RSI"] <= 25,
+        "RSI 40以下 ＋ MACDがシグナル以下": (
+            (records["RSI"] <= 40)
+            & records["MACDがシグナル以下"]
+        ),
+    }
+    summaries = []
+
+    for strategy_name, condition in strategies.items():
+        strategy_records = records[condition]
+        for period_name, period_records in [
+            ("前半70%", strategy_records[strategy_records["取引日"] <= split_date]),
+            ("後半30%", strategy_records[strategy_records["取引日"] > split_date]),
+        ]:
+            success = period_records[period_records["結果"] == "成功"]
+            success_rate = (
+                (len(success) / len(period_records)) * 100
+                if not period_records.empty
+                else None
+            )
+            summaries.append(
+                {
+                    "候補条件": strategy_name,
+                    "検証期間": period_name,
+                    "検証件数": int(len(period_records)),
+                    "成功件数": int(len(success)),
+                    "成功率(%)": round(success_rate, 2)
+                    if success_rate is not None
+                    else None,
+                }
+            )
+
+    return {
+        "分割日": split_date,
+        "前半取引日数": split_index + 1,
+        "後半取引日数": len(trade_dates) - split_index - 1,
+        "戦略別集計": summaries,
+    }
 
 
 def create_summary(
@@ -209,6 +261,7 @@ def create_summary(
             "RSI条件": summarize(records, "RSI条件"),
             "MACD条件": summarize(records, "MACD条件"),
         },
+        "時系列分割検証": summarize_time_split_strategies(records),
         "銘柄別集計": summarize(records, "銘柄コード"),
     }
 

@@ -335,6 +335,22 @@ def show_historical_backtest_tab():
                     hide_index=True,
                 )
 
+    st.subheader("時系列分割による再現性確認")
+    time_split = summary.get("時系列分割検証", {})
+    st.caption(
+        f"前半70%と後半30%の分割日: {time_split.get('分割日', '不明')}。"
+        "前半だけで良く、後半で再現しない条件は採用しません。"
+    )
+    strategy_summary = pd.DataFrame(time_split.get("戦略別集計", []))
+    if strategy_summary.empty:
+        st.info("時系列分割の集計データがありません。")
+    else:
+        st.dataframe(
+            strategy_summary,
+            use_container_width=True,
+            hide_index=True,
+        )
+
     st.subheader("銘柄別の2%到達率")
     ticker_summary = pd.DataFrame(summary.get("銘柄別集計", []))
     st.dataframe(ticker_summary, use_container_width=True, hide_index=True)
