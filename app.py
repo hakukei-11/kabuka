@@ -21,6 +21,7 @@ matplotlib.rcParams["axes.unicode_minus"] = False
 
 SCORE_DISPLAY_THRESHOLD = 50
 BACKTEST_REPORT_PATH = Path("reports/backtest_summary.json")
+HISTORICAL_BACKTEST_REPORT_PATH = Path("reports/historical_backtest_summary.json")
 
 st.set_page_config(
     page_title="寄り付き天底狙いスクリーナー",
@@ -77,6 +78,16 @@ def load_backtest_summary() -> dict | None:
     """backtest.pyが出力した集計JSONを読み込む。"""
     try:
         with BACKTEST_REPORT_PATH.open("r", encoding="utf-8") as file:
+            return json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def load_historical_backtest_summary() -> dict | None:
+    """historical_backtest.pyが出力した集計JSONを読み込む。"""
+    try:
+        with HISTORICAL_BACKTEST_REPORT_PATH.open("r", encoding="utf-8") as file:
             return json.load(file)
     except (FileNotFoundError, json.JSONDecodeError):
         return None
@@ -269,6 +280,43 @@ def show_backtest_tab():
     )
 
 
+def show_historical_backtest_tab():
+    """過去日足で再計算したスコアの2%到達率を表示する。"""
+    st.header("🕰️ 過去データ検証")
+    summary = load_historical_backtest_summary()
+
+    if summary is None:
+        st.info(
+            "履歴バックテスト結果がまだありません。ターミナルで "
+            "`python historical_backtest.py` を実行してください。"
+        )
+        return
+
+    conditions = summary.get("検証条件", {})
+    overall = summary.get("全体集計", {})
+    st.caption(f"作成日時（UTC）: {summary.get('作成日時UTC', '不明')}")
+    st.info(
+        f"条件: 過去{conditions.get('取得期間', '2y')}の調整済み終値を使い、"
+        f"以後{conditions.get('確認期間(取引日)', 20)}取引日以内の"
+        f"{conditions.get('目標上昇率(%)', 2)}%到達率を検証します。"
+    )
+
+    metric_columns = st.columns(4)
+    metric_columns[0].metric("検証件数", overall.get("検証件数", 0))
+    metric_columns[1].metric("成功件数", overall.get("成功件数", 0))
+    metric_columns[2].metric("2%到達率", format_percentage(overall.get("成功率(%)")))
+    metric_columns[3].metric("対象銘柄数", overall.get("対象銘柄数", 0))
+
+    st.subheader("スコア帯別の2%到達率")
+    score_summary = pd.DataFrame(summary.get("スコア別集計", []))
+    st.dataframe(score_summary, use_container_width=True, hide_index=True)
+
+    st.subheader("銘柄別の2%到達率")
+    ticker_summary = pd.DataFrame(summary.get("銘柄別集計", []))
+    st.dataframe(ticker_summary, use_container_width=True, hide_index=True)
+    st.caption(conditions.get("注意事項", ""))
+
+
 @st.cache_data(ttl=3600, show_spinner=False)
 def analyze_all_tickers():
     """全対象銘柄を一括取得し、共通分析エンジンで評価する。"""
@@ -412,11 +460,12 @@ else:
     japan_df = pd.DataFrame()
     us_df = pd.DataFrame()
 
-japan_tab, us_tab, backtest_tab = st.tabs(
+japan_tab, us_tab, backtest_tab, historical_backtest_tab = st.tabs(
     [
         f"🇯🇵 日本株（{len(japan_df)}銘柄）",
         f"🇺🇸 米国株（{len(us_df)}銘柄）",
         "📈 バックテスト",
+        "🕰️ 過去データ検証",
     ]
 )
 
@@ -438,3 +487,6 @@ with us_tab:
 
 with backtest_tab:
     show_backtest_tab()
+
+with historical_backtest_tab:
+    show_historical_backtest_tab()
