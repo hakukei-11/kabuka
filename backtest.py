@@ -16,8 +16,6 @@ DATA_DIRECTORY = PROJECT_ROOT / "data"
 REPORT_DIRECTORY = PROJECT_ROOT / "reports"
 REPORT_PATH = REPORT_DIRECTORY / "backtest_summary.json"
 REQUIRED_COLUMNS = {
-    "分析実行日時",
-    "取引日",
     "銘柄コード",
     "銘柄名",
     "終値",
@@ -73,7 +71,13 @@ def load_history(data_directory: Path) -> tuple[pd.DataFrame, int]:
             continue
 
         frame = frame.copy()
-        frame["CSV出力日"] = get_source_date(csv_path)
+        source_date = get_source_date(csv_path)
+        frame["CSV出力日"] = source_date
+
+        # 旧CSVには取引日がないため、出力日を暫定的な取引日として使う。
+        # 新CSVはCSV内の取引日を優先する。
+        if "取引日" not in frame.columns:
+            frame["取引日"] = source_date
         frames.append(frame)
 
     if not frames:
@@ -139,17 +143,24 @@ def create_trade_records(
                 future_history["終値"] >= target_price
             ]
 
-            if not reached_history.empty:
+            if not is_complete:
+                # 20取引日がそろう前の候補は、途中で目標へ到達していても
+                # スコア成功率の分母・分子には含めない。
+                result_status = "検証中"
+                if not reached_history.empty:
+                    first_reached = reached_history.iloc[0]
+                    reached_trade_date = first_reached["取引日"]
+                    days_to_target = int(first_reached.name - index)
+                else:
+                    reached_trade_date = pd.NaT
+                    days_to_target = None
+            elif not reached_history.empty:
                 first_reached = reached_history.iloc[0]
                 result_status = "成功"
                 reached_trade_date = first_reached["取引日"]
                 days_to_target = int(first_reached.name - index)
-            elif is_complete:
-                result_status = "未到達"
-                reached_trade_date = pd.NaT
-                days_to_target = None
             else:
-                result_status = "検証中"
+                result_status = "未到達"
                 reached_trade_date = pd.NaT
                 days_to_target = None
 
@@ -272,7 +283,12 @@ def create_summary(
             "目標上昇率(%)": target_return_pct,
             "確認期間(取引日)": lookahead_days,
             "価格条件": "CSVに記録された終値が、判定時終値の目標上昇率以上に到達",
-            "注意事項": "検証中は将来の取引日数が不足しているため、成功率の分母に含めません。",
+            "注意事項": (
+                "検証中は将来の取引日数が不足しているため、"
+                "途中で2%へ到達していても成功率の分母・分子に含めません。"
+                "旧CSVに取引日がない場合は、"
+                "CSV出力日を暫定的な取引日として扱います。"
+            ),
         },
         "データ概要": {
             "CSVファイル数": csv_file_count,
