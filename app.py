@@ -311,6 +311,30 @@ def show_historical_backtest_tab():
     score_summary = pd.DataFrame(summary.get("スコア別集計", []))
     st.dataframe(score_summary, use_container_width=True, hide_index=True)
 
+    st.subheader("条件別の2%到達率")
+    st.caption(
+        "現行スコアを構成する各条件を個別に比較します。"
+        "成功率だけでなく検証件数も確認してください。"
+    )
+    condition_summaries = summary.get("条件別集計", {})
+    condition_columns = st.columns(2)
+    for index, condition_name in enumerate(
+        ["25MA条件", "20日安値条件", "RSI条件", "MACD条件"]
+    ):
+        with condition_columns[index % 2]:
+            st.markdown(f"#### {condition_name}")
+            condition_summary = pd.DataFrame(
+                condition_summaries.get(condition_name, [])
+            )
+            if condition_summary.empty:
+                st.info("集計データがありません。")
+            else:
+                st.dataframe(
+                    condition_summary,
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
     st.subheader("銘柄別の2%到達率")
     ticker_summary = pd.DataFrame(summary.get("銘柄別集計", []))
     st.dataframe(ticker_summary, use_container_width=True, hide_index=True)

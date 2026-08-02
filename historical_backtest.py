@@ -39,6 +39,17 @@ def get_score_band(score: int) -> str:
     return "0-49点"
 
 
+def get_rsi_band(rsi: float) -> str:
+    """RSIを現行スコアの閾値に合わせた帯へ変換する。"""
+    if rsi <= 25:
+        return "RSI 25以下"
+    if rsi <= 30:
+        return "RSI 26-30"
+    if rsi <= 40:
+        return "RSI 31-40"
+    return "RSI 41超"
+
+
 def download_price_data(period: str) -> pd.DataFrame:
     """対象銘柄の調整済み日足を一括取得する。"""
     return yf.download(
@@ -121,6 +132,18 @@ def create_records(
                     "取引日": pd.Timestamp(analyzed_data.index[index]).strftime("%Y-%m-%d"),
                     "反発確度スコア": score,
                     "スコア帯": get_score_band(score),
+                    "25MA条件": "25MAタッチ" if is_25ma_touch else "25MA非タッチ",
+                    "20日安値条件": (
+                        "20日安値タッチ"
+                        if is_box_bottom_touch
+                        else "20日安値非タッチ"
+                    ),
+                    "RSI条件": get_rsi_band(rsi),
+                    "MACD条件": (
+                        "MACDがシグナル超え"
+                        if macd > signal
+                        else "MACDがシグナル以下"
+                    ),
                     "結果": result,
                     "到達日数": days_to_target,
                 }
@@ -180,6 +203,12 @@ def create_summary(
             "除外銘柄数": len(skipped_tickers),
         },
         "スコア別集計": summarize(records, "スコア帯"),
+        "条件別集計": {
+            "25MA条件": summarize(records, "25MA条件"),
+            "20日安値条件": summarize(records, "20日安値条件"),
+            "RSI条件": summarize(records, "RSI条件"),
+            "MACD条件": summarize(records, "MACD条件"),
+        },
         "銘柄別集計": summarize(records, "銘柄コード"),
     }
 
