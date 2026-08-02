@@ -1,5 +1,6 @@
 # app.py
 import json
+from pathlib import Path
 
 import matplotlib
 import matplotlib.font_manager as fm
@@ -18,6 +19,7 @@ matplotlib.rc("font", family="IPAexGothic")
 matplotlib.rcParams["axes.unicode_minus"] = False
 
 SCORE_DISPLAY_THRESHOLD = 50
+BACKTEST_REPORT_PATH = Path("reports/backtest_summary.json")
 
 st.set_page_config(
     page_title="寄り付き天底狙いスクリーナー",
@@ -67,6 +69,108 @@ def show_update_status():
                     f"最新取引日: {trade_date}\n\n"
                     f"最終確認時刻: {info.get('last_checked_at', '不明')}"
                 )
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def load_backtest_summary() -> dict | None:
+    """backtest.pyが出力した集計JSONを読み込む。"""
+    try:
+        with BACKTEST_REPORT_PATH.open("r", encoding="utf-8") as file:
+            return json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+
+
+def format_percentage(value: float | None) -> str:
+    """成功率などのパーセント表示を統一する。"""
+    return f"{value:.2f}%" if value is not None else "検証中"
+
+
+def show_backtest_tab():
+    """CSV履歴を利用した終値ベースの2%到達検証を表示する。"""
+    st.header("📈 2%到達バックテスト")
+    st.caption(
+        "各CSVの終値を買値と仮定し、以後の取引日で終値が2%上昇したかを検証します。"
+    )
+
+    summary = load_backtest_summary()
+    if summary is None:
+        st.info(
+            "バックテスト結果がまだありません。ターミナルで "
+            "`python backtest.py` を実行してください。"
+        )
+        return
+
+    conditions = summary.get("検証条件", {})
+    data_overview = summary.get("データ概要", {})
+    overall = summary.get("全体集計", {})
+
+    st.caption(
+        f"作成日時（UTC）: {summary.get('作成日時UTC', '不明')} / "
+        f"対象期間: {data_overview.get('最初の取引日', '不明')} ～ "
+        f"{data_overview.get('最新取引日', '不明')}"
+    )
+    st.info(
+        f"条件: 終値が{conditions.get('目標上昇率(%)', 2)}%上昇するかを、"
+        f"以後{conditions.get('確認期間(取引日)', 20)}取引日で確認します。"
+    )
+
+    metric_columns = st.columns(4)
+    metric_columns[0].metric("候補件数", overall.get("候補件数", 0))
+    metric_columns[1].metric("検証完了", overall.get("検証完了件数", 0))
+    metric_columns[2].metric("2%到達", overall.get("成功件数", 0))
+    metric_columns[3].metric("2%到達率", format_percentage(overall.get("成功率(%)")))
+
+    if overall.get("検証完了件数", 0) == 0:
+        st.warning(
+            "20取引日先まで確認できる履歴がまだ不足しています。"
+            "CSVが蓄積されると、検証完了件数と成功率が表示されます。"
+        )
+
+    st.subheader("スコア帯別の2%到達率")
+    score_summary = pd.DataFrame(summary.get("スコア別集計", []))
+    if score_summary.empty:
+        st.info("集計できるスコアデータがありません。")
+    else:
+        st.dataframe(score_summary, use_container_width=True, hide_index=True)
+
+    st.subheader("銘柄別の2%到達率")
+    ticker_summary = pd.DataFrame(summary.get("銘柄別集計", []))
+    if ticker_summary.empty:
+        st.info("集計できる銘柄データがありません。")
+    else:
+        st.dataframe(ticker_summary, use_container_width=True, hide_index=True)
+
+    st.subheader("取引別の検証結果")
+    records = pd.DataFrame(summary.get("取引別結果", []))
+    if records.empty:
+        st.info("取引別の結果はまだありません。")
+        return
+
+    status_options = ["すべて"] + sorted(records["検証状態"].dropna().unique().tolist())
+    selected_status = st.selectbox("検証状態で絞り込み", status_options)
+    if selected_status != "すべて":
+        records = records[records["検証状態"] == selected_status]
+
+    display_columns = [
+        "銘柄コード",
+        "銘柄名",
+        "取引日",
+        "終値",
+        "目標売値",
+        "反発確度スコア",
+        "スコア帯",
+        "検証状態",
+        "2%到達取引日",
+        "到達日数",
+        "最大上昇率(%)",
+        "判定",
+    ]
+    st.dataframe(
+        records.reindex(columns=display_columns),
+        use_container_width=True,
+        hide_index=True,
+    )
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
@@ -186,27 +290,26 @@ st.divider()
 with st.spinner("全銘柄を分析しています..."):
     results, chart_data = analyze_all_tickers()
 
-if not results:
-    st.warning("分析結果がありません。yfinanceの取得状況を確認してください。")
-    st.stop()
+if results:
+    results_df = pd.DataFrame(results).sort_values(
+        "反発確度スコア",
+        ascending=False,
+    )
+    japan_df = results_df[
+        results_df["銘柄コード"].str.endswith(".T")
+    ].copy()
+    us_df = results_df[
+        ~results_df["銘柄コード"].str.endswith(".T")
+    ].copy()
+else:
+    japan_df = pd.DataFrame()
+    us_df = pd.DataFrame()
 
-results_df = pd.DataFrame(results).sort_values(
-    "反発確度スコア",
-    ascending=False,
-)
-
-japan_df = results_df[
-    results_df["銘柄コード"].str.endswith(".T")
-].copy()
-
-us_df = results_df[
-    ~results_df["銘柄コード"].str.endswith(".T")
-].copy()
-
-japan_tab, us_tab = st.tabs(
+japan_tab, us_tab, backtest_tab = st.tabs(
     [
         f"🇯🇵 日本株（{len(japan_df)}銘柄）",
         f"🇺🇸 米国株（{len(us_df)}銘柄）",
+        "📈 バックテスト",
     ]
 )
 
@@ -225,3 +328,6 @@ with us_tab:
         tab_name="🇺🇸 米国株",
         key="us",
     )
+
+with backtest_tab:
+    show_backtest_tab()
