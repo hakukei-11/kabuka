@@ -35,13 +35,13 @@ def parse_arguments() -> argparse.Namespace:
         "--lookahead-days",
         type=int,
         default=20,
-        help="2%到達を確認する将来取引日数（初期値: 20）",
+        help="2%%到達を確認する将来取引日数（初期値: 20）",
     )
     parser.add_argument(
         "--target-return-pct",
         type=float,
         default=2.0,
-        help="目標上昇率（初期値: 2.0）",
+        help="目標上昇率（初期値: 2.0%%）",
     )
     return parser.parse_args()
 
