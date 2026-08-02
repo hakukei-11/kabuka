@@ -1,5 +1,6 @@
 # app.py
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 import matplotlib
@@ -84,6 +85,101 @@ def load_backtest_summary() -> dict | None:
 def format_percentage(value: float | None) -> str:
     """成功率などのパーセント表示を統一する。"""
     return f"{value:.2f}%" if value is not None else "検証中"
+
+
+def format_price(value: float | None, currency: str) -> str:
+    """株価を通貨に応じた表示用の文字列へ変換する。"""
+    if value is None or pd.isna(value):
+        return "データなし"
+
+    if currency == "JPY":
+        return f"¥{value:,.0f}"
+    return f"${value:,.2f}"
+
+
+@st.cache_data(ttl=86400, show_spinner=False)
+def get_analyst_price_targets(ticker: str) -> dict | None:
+    """Yahoo Finance経由でアナリスト予想株価を取得し、24時間キャッシュする。"""
+    try:
+        ticker_object = yf.Ticker(ticker)
+        fetcher = getattr(ticker_object, "get_analyst_price_targets", None)
+        targets = (
+            fetcher()
+            if callable(fetcher)
+            else ticker_object.analyst_price_targets
+        )
+    except Exception:
+        return None
+
+    if not isinstance(targets, dict):
+        return None
+
+    result = {
+        "current": pd.to_numeric(targets.get("current"), errors="coerce"),
+        "low": pd.to_numeric(targets.get("low"), errors="coerce"),
+        "high": pd.to_numeric(targets.get("high"), errors="coerce"),
+        "mean": pd.to_numeric(targets.get("mean"), errors="coerce"),
+        "median": pd.to_numeric(targets.get("median"), errors="coerce"),
+        "取得日時UTC": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+
+    if all(pd.isna(result[key]) for key in ["low", "high", "mean", "median"]):
+        return None
+
+    return result
+
+
+def show_analyst_price_targets(
+    ticker: str,
+    name: str,
+    latest_close: float,
+) -> None:
+    """選択銘柄のアナリスト予想株価を参考情報として表示する。"""
+    st.subheader("🎯 アナリスト予想株価（参考）")
+    targets = get_analyst_price_targets(ticker)
+
+    if targets is None:
+        st.info(
+            f"{name}（{ticker}）のアナリスト予想株価は取得できませんでした。"
+        )
+        return
+
+    currency = "JPY" if ticker.endswith(".T") else "USD"
+    mean_target = targets["mean"]
+    mean_upside = (
+        ((mean_target - latest_close) / latest_close) * 100
+        if pd.notna(mean_target) and latest_close > 0
+        else None
+    )
+
+    metric_columns = st.columns(4)
+    metric_columns[0].metric(
+        "平均目標株価",
+        format_price(mean_target, currency),
+        format_percentage(mean_upside) if mean_upside is not None else None,
+    )
+    metric_columns[1].metric(
+        "中央値",
+        format_price(targets["median"], currency),
+    )
+    metric_columns[2].metric(
+        "予想安値",
+        format_price(targets["low"], currency),
+    )
+    metric_columns[3].metric(
+        "予想高値",
+        format_price(targets["high"], currency),
+    )
+
+    st.caption(
+        f"基準終値: {format_price(latest_close, currency)} / "
+        f"取得日時（UTC）: {targets['取得日時UTC']}"
+    )
+    st.caption(
+        "Yahoo Finance経由のアナリスト予想集計値です。"
+        "銘柄によって未提供・更新遅延があります。"
+        "売買を推奨する情報ではありません。"
+    )
 
 
 def show_backtest_tab():
@@ -272,6 +368,11 @@ def show_stock_tab(
         "銘柄コード",
     ].iloc[0]
 
+    selected_close = float(results_df.loc[
+        results_df["銘柄コード"] == selected_ticker,
+        "終値",
+    ].iloc[0])
+
     chart_df = chart_data[selected_ticker]
 
     fig = plot_chart(
@@ -281,6 +382,12 @@ def show_stock_tab(
     )
     st.pyplot(fig)
     plt.close(fig)
+
+    show_analyst_price_targets(
+        ticker=selected_ticker,
+        name=selected_name,
+        latest_close=selected_close,
+    )
 
 
 show_update_status()
