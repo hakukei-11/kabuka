@@ -1,5 +1,4 @@
 # app.py
-
 import json
 
 import matplotlib
@@ -81,7 +80,7 @@ def analyze_all_tickers():
         period="6mo",
         group_by="ticker",
         threads=True,
-        auto_adjust=False,
+        auto_adjust=True,
         progress=False,
     )
 
@@ -112,7 +111,12 @@ def analyze_all_tickers():
     return results, chart_data
 
 
-def show_stock_tab(results_df: pd.DataFrame, chart_data: dict, tab_name: str, key: str):
+def show_stock_tab(
+    results_df: pd.DataFrame,
+    chart_data: dict,
+    tab_name: str,
+    key: str,
+):
     """日本株・米国株共通の一覧とチャートを表示する。"""
     st.header(f"{tab_name}（スコア{SCORE_DISPLAY_THRESHOLD}以上）")
 
