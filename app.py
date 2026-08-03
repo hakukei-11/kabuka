@@ -382,9 +382,15 @@ def show_risk_backtest_tab():
         f"{conditions.get('確認期間(取引日)', 20)}取引日を確認します。"
     )
     overall = pd.DataFrame(summary.get("全体集計", []))
+    event_order = pd.DataFrame(summary.get("先後判定集計", []))
     ticker_summary = pd.DataFrame(summary.get("銘柄別集計", []))
     st.subheader("全銘柄の集計")
     st.dataframe(overall, use_container_width=True, hide_index=True)
+    st.subheader("利確・損失ラインの先後判定")
+    st.dataframe(event_order, use_container_width=True, hide_index=True)
+    st.caption(
+        "保守成功率は同日両方到達を失敗扱い、楽観成功率は成功扱いにした範囲です。"
+    )
     st.subheader("銘柄別の集計")
     st.dataframe(ticker_summary, use_container_width=True, hide_index=True)
     st.caption("同一日に利確価格と損失価格の両方へ到達した順序は、日足だけでは判定できません。")
