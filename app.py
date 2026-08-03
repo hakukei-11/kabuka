@@ -22,6 +22,7 @@ matplotlib.rcParams["axes.unicode_minus"] = False
 SCORE_DISPLAY_THRESHOLD = 50
 BACKTEST_REPORT_PATH = Path("reports/backtest_summary.json")
 HISTORICAL_BACKTEST_REPORT_PATH = Path("reports/historical_backtest_summary.json")
+RISK_BACKTEST_REPORT_PATH = Path("reports/risk_backtest_summary.json")
 
 st.set_page_config(
     page_title="寄り付き天底狙いスクリーナー",
@@ -88,6 +89,16 @@ def load_historical_backtest_summary() -> dict | None:
     """historical_backtest.pyが出力した集計JSONを読み込む。"""
     try:
         with HISTORICAL_BACKTEST_REPORT_PATH.open("r", encoding="utf-8") as file:
+            return json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def load_risk_backtest_summary() -> dict | None:
+    """risk_backtest.pyが出力した集計JSONを読み込む。"""
+    try:
+        with RISK_BACKTEST_REPORT_PATH.open("r", encoding="utf-8") as file:
             return json.load(file)
     except (FileNotFoundError, json.JSONDecodeError):
         return None
@@ -357,6 +368,28 @@ def show_historical_backtest_tab():
     st.caption(conditions.get("注意事項", ""))
 
 
+def show_risk_backtest_tab():
+    """利確到達と最大含み損を含むリスク検証を表示する。"""
+    st.header("⚖️ リスク込み過去データ検証")
+    summary = load_risk_backtest_summary()
+    if summary is None:
+        st.info("結果がまだありません。`python risk_backtest.py` を実行してください。")
+        return
+    conditions = summary.get("検証条件", {})
+    st.info(
+        f"条件: +{conditions.get('利確目標(%)', 2)}%到達、"
+        f"{conditions.get('損失閾値(%)', [3, 5])}%下落、"
+        f"{conditions.get('確認期間(取引日)', 20)}取引日を確認します。"
+    )
+    overall = pd.DataFrame(summary.get("全体集計", []))
+    ticker_summary = pd.DataFrame(summary.get("銘柄別集計", []))
+    st.subheader("全銘柄の集計")
+    st.dataframe(overall, use_container_width=True, hide_index=True)
+    st.subheader("銘柄別の集計")
+    st.dataframe(ticker_summary, use_container_width=True, hide_index=True)
+    st.caption("同一日に利確価格と損失価格の両方へ到達した順序は、日足だけでは判定できません。")
+
+
 @st.cache_data(ttl=3600, show_spinner=False)
 def analyze_all_tickers():
     """全対象銘柄を一括取得し、共通分析エンジンで評価する。"""
@@ -500,12 +533,13 @@ else:
     japan_df = pd.DataFrame()
     us_df = pd.DataFrame()
 
-japan_tab, us_tab, backtest_tab, historical_backtest_tab = st.tabs(
+japan_tab, us_tab, backtest_tab, historical_backtest_tab, risk_backtest_tab = st.tabs(
     [
         f"🇯🇵 日本株（{len(japan_df)}銘柄）",
         f"🇺🇸 米国株（{len(us_df)}銘柄）",
         "📈 バックテスト",
         "🕰️ 過去データ検証",
+        "⚖️ リスク検証",
     ]
 )
 
@@ -530,3 +564,6 @@ with backtest_tab:
 
 with historical_backtest_tab:
     show_historical_backtest_tab()
+
+with risk_backtest_tab:
+    show_risk_backtest_tab()
