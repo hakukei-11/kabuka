@@ -9,6 +9,7 @@ from pathlib import Path
 import pandas as pd
 import yfinance as yf
 
+from analysis_engine import prepare_dataframe
 from tickers import TICKERS
 
 
@@ -227,6 +228,52 @@ def summarize_ticker_cost_reproducibility(records: pd.DataFrame) -> dict:
     }
 
 
+def summarize_condition_cost_reproducibility(records: pd.DataFrame) -> dict:
+    """事前定義した技術条件を前半・後半のコスト後成績で比較する。"""
+    trade_dates = sorted(records["取引日"].unique().tolist())
+    split_index = max(0, int(len(trade_dates) * 0.7) - 1)
+    split_date = trade_dates[split_index]
+    first_records = records[records["取引日"] <= split_date]
+    latter_records = records[records["取引日"] > split_date]
+    return_column = f"-{int(REFERENCE_STOP_LOSS_PCT)}%保守リターン(%)"
+    conditions = [
+        ("全銘柄（基準）", lambda frame: frame),
+        ("RSI 40以下", lambda frame: frame[frame["RSI40以下"]]),
+        ("MACDがSignal以下", lambda frame: frame[frame["MACDシグナル以下"]]),
+        ("25MAタッチ", lambda frame: frame[frame["25MAタッチ"]]),
+        (
+            "RSI 40以下 かつ MACDがSignal以下",
+            lambda frame: frame[frame["RSI40以下"] & frame["MACDシグナル以下"]],
+        ),
+        ("20日安値タッチ", lambda frame: frame[frame["20日安値タッチ"]]),
+    ]
+    summaries = []
+
+    for condition_name, filter_records in conditions:
+        first_group = filter_records(first_records)
+        latter_group = filter_records(latter_records)
+        first_net_return = first_group[return_column] - REFERENCE_ROUND_TRIP_COST_PCT
+        latter_net_return = latter_group[return_column] - REFERENCE_ROUND_TRIP_COST_PCT
+        summaries.append({
+            "条件": condition_name,
+            "前半検証件数": int(len(first_group)),
+            "前半コスト後平均リターン(%)": round(first_net_return.mean(), 3),
+            "後半検証件数": int(len(latter_group)),
+            "後半コスト後平均リターン(%)": round(latter_net_return.mean(), 3),
+            "後半コスト後勝率(%)": round((latter_net_return > 0).mean() * 100, 2),
+            "後半判定": "プラス" if latter_net_return.mean() > 0 else "マイナス",
+        })
+
+    return {
+        "分割日": split_date,
+        "基準": {
+            "損失ライン": f"-{int(REFERENCE_STOP_LOSS_PCT)}%",
+            "往復コスト(%)": REFERENCE_ROUND_TRIP_COST_PCT,
+        },
+        "集計": summaries,
+    }
+
+
 def main() -> None:
     """2年分の日足を使ってリスク指標を保存する。"""
     prices = yf.download(
@@ -239,9 +286,12 @@ def main() -> None:
             data = prices[ticker].dropna(how="all")
         except (KeyError, TypeError):
             continue
-        if len(data) <= LOOKAHEAD_DAYS:
+        data = prepare_dataframe(data)
+        if data is None or len(data) <= LOOKAHEAD_DAYS:
             continue
         for index in range(len(data) - LOOKAHEAD_DAYS):
+            if pd.isna(data["RSI"].iloc[index]) or pd.isna(data["25MA"].iloc[index]):
+                continue
             entry = float(data["Close"].iloc[index])
             future = data.iloc[index + 1:index + 1 + LOOKAHEAD_DAYS]
             max_drawdown = ((float(future["Low"].min()) - entry) / entry) * 100
@@ -252,6 +302,10 @@ def main() -> None:
                 "+2%到達": bool((future["High"] >= entry * 1.02).any()),
                 "最大含み損(%)": max_drawdown,
                 "20日後リターン(%)": ((float(future["Close"].iloc[-1]) - entry) / entry) * 100,
+                "25MAタッチ": bool(data["25MAタッチ"].iloc[index]),
+                "20日安値タッチ": bool(data["20日安値タッチ"].iloc[index]),
+                "RSI40以下": bool(data["RSI40以下"].iloc[index]),
+                "MACDシグナル以下": bool(data["MACDシグナル以下"].iloc[index]),
             }
             for stop_loss_pct in STOP_LOSS_PCTS:
                 record[f"-{int(stop_loss_pct)}%到達"] = bool(
@@ -296,6 +350,7 @@ def main() -> None:
         "コスト感度分析": summarize_cost_sensitivity(frame),
         "銘柄別コスト後分析": summarize_ticker_cost_adjusted_returns(frame),
         "銘柄別コスト後再現性": summarize_ticker_cost_reproducibility(frame),
+        "条件別コスト後再現性": summarize_condition_cost_reproducibility(frame),
         "銘柄別集計": summarize_records(frame, "銘柄コード"),
     }
     REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)

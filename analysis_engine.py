@@ -43,6 +43,16 @@ def prepare_dataframe(df: pd.DataFrame) -> pd.DataFrame | None:
     data["Low20"] = data["Low"].rolling(20).min()
     data["RSI"] = calc_rsi(data["Close"])
     data["MACD"], data["Signal"] = calc_macd(data["Close"])
+    data["25MAタッチ"] = (
+        ((data["Close"] - data["25MA"]).abs() / data["25MA"] * 100)
+        <= THRESHOLD
+    )
+    data["20日安値タッチ"] = (
+        ((data["Close"] - data["Low20"]).abs() / data["Low20"] * 100)
+        <= THRESHOLD
+    )
+    data["RSI40以下"] = data["RSI"] <= 40
+    data["MACDシグナル以下"] = data["MACD"] <= data["Signal"]
 
     return data
 
@@ -136,19 +146,15 @@ def analyze_dataframe(
     if pd.isna(latest_ma) or pd.isna(latest_rsi):
         return None, None
 
-    deviation_ma = ((latest_close - latest_ma) / latest_ma) * 100
     difference = latest_close - previous_close
     change_rate = (difference / previous_close) * 100
 
-    is_25ma_touch = abs(deviation_ma) <= THRESHOLD
+    is_25ma_touch = bool(data["25MAタッチ"].iloc[-1])
     is_box_top_touch = (
         abs(latest_close - latest_high20)
         <= latest_high20 * THRESHOLD / 100
     )
-    is_box_bottom_touch = (
-        abs(latest_close - latest_low20)
-        <= latest_low20 * THRESHOLD / 100
-    )
+    is_box_bottom_touch = bool(data["20日安値タッチ"].iloc[-1])
 
     score = calc_rebound_score(
         is_25ma_touch=is_25ma_touch,

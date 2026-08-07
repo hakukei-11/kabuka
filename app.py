@@ -388,6 +388,7 @@ def show_risk_backtest_tab():
     cost_sensitivity = summary.get("コスト感度分析", {})
     ticker_cost_adjusted = summary.get("銘柄別コスト後分析", {})
     ticker_cost_reproducibility = summary.get("銘柄別コスト後再現性", {})
+    condition_cost_reproducibility = summary.get("条件別コスト後再現性", {})
     ticker_summary = pd.DataFrame(summary.get("銘柄別集計", []))
     st.subheader("全銘柄の集計")
     st.dataframe(overall, use_container_width=True, hide_index=True)
@@ -448,6 +449,17 @@ def show_risk_backtest_tab():
     )
     st.dataframe(
         pd.DataFrame(ticker_cost_reproducibility.get("集計", [])),
+        use_container_width=True,
+        hide_index=True,
+    )
+    st.subheader("技術条件別のコスト後再現性")
+    st.caption(
+        f"分割日: {condition_cost_reproducibility.get('分割日', '不明')}。"
+        "既存の分析条件を個別・組み合わせで比較します。"
+        "後半の結果だけを理由に条件を採用しないでください。"
+    )
+    st.dataframe(
+        pd.DataFrame(condition_cost_reproducibility.get("集計", [])),
         use_container_width=True,
         hide_index=True,
     )
