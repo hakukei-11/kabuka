@@ -259,6 +259,50 @@ def show_backtest_tab():
     else:
         st.dataframe(ticker_summary, use_container_width=True, hide_index=True)
 
+    st.subheader("検証済み候補の運用データ追跡")
+    st.caption(
+        "日次CSVに20日安値タッチとして記録された候補について、"
+        "その後20取引日以内の終値ベース2%到達を継続確認します。"
+    )
+    validated_summary = summary.get("検証済み候補集計", {})
+    validated_columns = st.columns(4)
+    validated_columns[0].metric("候補件数", validated_summary.get("候補件数", 0))
+    validated_columns[1].metric("検証完了", validated_summary.get("検証完了件数", 0))
+    validated_columns[2].metric("2%到達", validated_summary.get("成功件数", 0))
+    validated_columns[3].metric(
+        "2%到達率",
+        format_percentage(validated_summary.get("成功率(%)")),
+    )
+    validated_records = pd.DataFrame(summary.get("取引別結果", []))
+    if "20日安値タッチ" in validated_records.columns:
+        validated_records = validated_records[
+            validated_records["20日安値タッチ"] == True
+        ]
+    if validated_records.empty:
+        st.info(
+            "20日安値タッチ列を含む日次CSVがまだ蓄積されていません。"
+            "次回以降のDaily Exportから追跡を開始します。"
+        )
+    else:
+        st.dataframe(
+            validated_records.reindex(
+                columns=[
+                    "銘柄コード",
+                    "銘柄名",
+                    "取引日",
+                    "終値",
+                    "目標売値",
+                    "検証状態",
+                    "2%到達取引日",
+                    "到達日数",
+                    "最大上昇率(%)",
+                    "判定",
+                ]
+            ),
+            use_container_width=True,
+            hide_index=True,
+        )
+
     st.subheader("取引別の検証結果")
     records = pd.DataFrame(summary.get("取引別結果", []))
     if records.empty:

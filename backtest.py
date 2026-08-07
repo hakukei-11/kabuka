@@ -71,6 +71,15 @@ def load_history(data_directory: Path) -> tuple[pd.DataFrame, int]:
             continue
 
         frame = frame.copy()
+        if "20日安値タッチ" in frame.columns:
+            frame["20日安値タッチ"] = (
+                frame["20日安値タッチ"]
+                .astype(str)
+                .str.lower()
+                .map({"true": True, "false": False})
+            )
+        else:
+            frame["20日安値タッチ"] = pd.NA
         source_date = get_source_date(csv_path)
         frame["CSV出力日"] = source_date
 
@@ -184,6 +193,7 @@ def create_trade_records(
                     "目標売値": target_price,
                     "反発確度スコア": int(row["反発確度スコア"]),
                     "スコア帯": get_score_band(float(row["反発確度スコア"])),
+                    "20日安値タッチ": row["20日安値タッチ"],
                     "判定": row["判定"],
                     "将来取引日数": future_days,
                     "検証状態": result_status,
@@ -235,6 +245,25 @@ def summarize_records(records: pd.DataFrame, group_column: str) -> list[dict]:
         )
 
     return summaries
+
+
+def summarize_validated_candidates(records: pd.DataFrame) -> dict:
+    """20日安値タッチとして記録された日次候補の成績を集計する。"""
+    candidates = records[records["20日安値タッチ"] == True]
+    completed = candidates[candidates["検証状態"].isin(["成功", "未到達"])]
+    successful = completed[completed["検証状態"] == "成功"]
+    success_rate = (
+        len(successful) / len(completed) * 100
+        if not completed.empty
+        else None
+    )
+    return {
+        "候補件数": int(len(candidates)),
+        "検証完了件数": int(len(completed)),
+        "成功件数": int(len(successful)),
+        "検証中件数": int((candidates["検証状態"] == "検証中").sum()),
+        "成功率(%)": round(success_rate, 2) if success_rate is not None else None,
+    }
 
 
 def convert_records_for_json(records: pd.DataFrame) -> list[dict]:
@@ -318,6 +347,7 @@ def create_summary(
             else None,
         },
         "スコア別集計": summarize_records(records, "スコア帯"),
+        "検証済み候補集計": summarize_validated_candidates(records),
         "判定別集計": summarize_records(records, "判定"),
         "銘柄別集計": summarize_records(records, "銘柄コード"),
         "取引別結果": convert_records_for_json(records),
