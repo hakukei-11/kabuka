@@ -94,6 +94,35 @@ def summarize_expected_return(records: pd.DataFrame, stop_loss_pct: float) -> li
     }]
 
 
+def summarize_time_split_returns(records: pd.DataFrame) -> dict:
+    """前半70%と後半30%で期待リターンの再現性を比較する。"""
+    trade_dates = sorted(records["取引日"].unique().tolist())
+    split_index = max(0, int(len(trade_dates) * 0.7) - 1)
+    split_date = trade_dates[split_index]
+    summaries = []
+
+    for stop_loss_pct in STOP_LOSS_PCTS:
+        stop_label = f"-{int(stop_loss_pct)}%"
+        for period_name, period_records in [
+            ("前半70%", records[records["取引日"] <= split_date]),
+            ("後半30%", records[records["取引日"] > split_date]),
+        ]:
+            for scenario_name, column in [
+                ("保守", f"{stop_label}保守リターン(%)"),
+                ("楽観", f"{stop_label}楽観リターン(%)"),
+            ]:
+                summaries.append({
+                    "損失ライン": stop_label,
+                    "検証期間": period_name,
+                    "判定": scenario_name,
+                    "検証件数": int(len(period_records)),
+                    "平均リターン(%)": round(period_records[column].mean(), 3),
+                    "勝率(%)": round((period_records[column] > 0).mean() * 100, 2),
+                })
+
+    return {"分割日": split_date, "集計": summaries}
+
+
 def main() -> None:
     """2年分の日足を使ってリスク指標を保存する。"""
     prices = yf.download(
@@ -115,6 +144,7 @@ def main() -> None:
             record = {
                 "銘柄コード": ticker,
                 "銘柄名": name,
+                "取引日": pd.Timestamp(data.index[index]).strftime("%Y-%m-%d"),
                 "+2%到達": bool((future["High"] >= entry * 1.02).any()),
                 "最大含み損(%)": max_drawdown,
                 "20日後リターン(%)": ((float(future["Close"].iloc[-1]) - entry) / entry) * 100,
@@ -158,6 +188,7 @@ def main() -> None:
             *summarize_expected_return(frame, 3.0),
             *summarize_expected_return(frame, 5.0),
         ],
+        "時系列分割期待リターン": summarize_time_split_returns(frame),
         "銘柄別集計": summarize_records(frame, "銘柄コード"),
     }
     REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)

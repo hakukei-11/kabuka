@@ -384,6 +384,7 @@ def show_risk_backtest_tab():
     overall = pd.DataFrame(summary.get("全体集計", []))
     event_order = pd.DataFrame(summary.get("先後判定集計", []))
     expected_return = pd.DataFrame(summary.get("期待リターン集計", []))
+    time_split_return = summary.get("時系列分割期待リターン", {})
     ticker_summary = pd.DataFrame(summary.get("銘柄別集計", []))
     st.subheader("全銘柄の集計")
     st.dataframe(overall, use_container_width=True, hide_index=True)
@@ -397,6 +398,16 @@ def show_risk_backtest_tab():
     st.caption(
         "未到達は20日後の終値で決済した場合の実績リターンです。"
         "手数料・税金・スリッページは含みません。"
+    )
+    st.subheader("時系列分割による期待リターンの再現性")
+    st.caption(
+        f"分割日: {time_split_return.get('分割日', '不明')}。"
+        "後半30%でも保守平均リターンがプラスかを確認します。"
+    )
+    st.dataframe(
+        pd.DataFrame(time_split_return.get("集計", [])),
+        use_container_width=True,
+        hide_index=True,
     )
     st.subheader("銘柄別の集計")
     st.dataframe(ticker_summary, use_container_width=True, hide_index=True)
