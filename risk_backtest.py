@@ -18,6 +18,8 @@ LOOKAHEAD_DAYS = 20
 TARGET_RETURN_PCT = 2.0
 STOP_LOSS_PCTS = (3.0, 5.0)
 ROUND_TRIP_COST_PCTS = (0.0, 0.1, 0.2, 0.3)
+REFERENCE_STOP_LOSS_PCT = 5.0
+REFERENCE_ROUND_TRIP_COST_PCT = 0.1
 
 
 def summarize_records(records: pd.DataFrame, group_column: str) -> list[dict]:
@@ -151,6 +153,80 @@ def summarize_cost_sensitivity(records: pd.DataFrame) -> dict:
     return {"分割日": split_date, "集計": summaries}
 
 
+def summarize_ticker_cost_adjusted_returns(records: pd.DataFrame) -> dict:
+    """後半30%の銘柄別コスト後リターンを比較する。"""
+    trade_dates = sorted(records["取引日"].unique().tolist())
+    split_index = max(0, int(len(trade_dates) * 0.7) - 1)
+    split_date = trade_dates[split_index]
+    latter_records = records[records["取引日"] > split_date]
+    return_column = f"-{int(REFERENCE_STOP_LOSS_PCT)}%保守リターン(%)"
+    summaries = []
+
+    for ticker, group in latter_records.groupby("銘柄コード", sort=True):
+        net_return = group[return_column] - REFERENCE_ROUND_TRIP_COST_PCT
+        summaries.append({
+            "銘柄コード": str(ticker),
+            "銘柄名": str(group["銘柄名"].iloc[0]),
+            "検証件数": int(len(group)),
+            "損失ライン": f"-{int(REFERENCE_STOP_LOSS_PCT)}%",
+            "往復コスト(%)": REFERENCE_ROUND_TRIP_COST_PCT,
+            "コスト後平均リターン(%)": round(net_return.mean(), 3),
+            "コスト後勝率(%)": round((net_return > 0).mean() * 100, 2),
+            "判定": "プラス" if net_return.mean() > 0 else "マイナス",
+        })
+
+    summaries.sort(key=lambda item: item["コスト後平均リターン(%)"], reverse=True)
+    return {"分割日": split_date, "集計": summaries}
+
+
+def summarize_ticker_cost_reproducibility(records: pd.DataFrame) -> dict:
+    """前半で選んだ銘柄の後半コスト後リターンを検証する。"""
+    trade_dates = sorted(records["取引日"].unique().tolist())
+    split_index = max(0, int(len(trade_dates) * 0.7) - 1)
+    split_date = trade_dates[split_index]
+    first_records = records[records["取引日"] <= split_date]
+    latter_records = records[records["取引日"] > split_date]
+    return_column = f"-{int(REFERENCE_STOP_LOSS_PCT)}%保守リターン(%)"
+    summaries = []
+
+    for ticker, first_group in first_records.groupby("銘柄コード", sort=True):
+        latter_group = latter_records[latter_records["銘柄コード"] == ticker]
+        if latter_group.empty:
+            continue
+        first_net_return = first_group[return_column] - REFERENCE_ROUND_TRIP_COST_PCT
+        latter_net_return = latter_group[return_column] - REFERENCE_ROUND_TRIP_COST_PCT
+        selected_in_first = first_net_return.mean() > 0
+        latter_positive = latter_net_return.mean() > 0
+        summaries.append({
+            "銘柄コード": str(ticker),
+            "銘柄名": str(first_group["銘柄名"].iloc[0]),
+            "前半検証件数": int(len(first_group)),
+            "前半コスト後平均リターン(%)": round(first_net_return.mean(), 3),
+            "前半選定": "採用候補" if selected_in_first else "対象外",
+            "後半検証件数": int(len(latter_group)),
+            "後半コスト後平均リターン(%)": round(latter_net_return.mean(), 3),
+            "後半検証": "プラス" if latter_positive else "マイナス",
+            "再現性判定": "維持" if selected_in_first and latter_positive else "未確認",
+        })
+
+    summaries.sort(
+        key=lambda item: item["後半コスト後平均リターン(%)"],
+        reverse=True,
+    )
+    selected = [item for item in summaries if item["前半選定"] == "採用候補"]
+    reproduced = [item for item in selected if item["再現性判定"] == "維持"]
+    return {
+        "分割日": split_date,
+        "基準": {
+            "損失ライン": f"-{int(REFERENCE_STOP_LOSS_PCT)}%",
+            "往復コスト(%)": REFERENCE_ROUND_TRIP_COST_PCT,
+        },
+        "前半採用候補数": len(selected),
+        "後半でプラス維持した銘柄数": len(reproduced),
+        "集計": summaries,
+    }
+
+
 def main() -> None:
     """2年分の日足を使ってリスク指標を保存する。"""
     prices = yf.download(
@@ -218,6 +294,8 @@ def main() -> None:
         ],
         "時系列分割期待リターン": summarize_time_split_returns(frame),
         "コスト感度分析": summarize_cost_sensitivity(frame),
+        "銘柄別コスト後分析": summarize_ticker_cost_adjusted_returns(frame),
+        "銘柄別コスト後再現性": summarize_ticker_cost_reproducibility(frame),
         "銘柄別集計": summarize_records(frame, "銘柄コード"),
     }
     REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)

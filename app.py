@@ -386,6 +386,8 @@ def show_risk_backtest_tab():
     expected_return = pd.DataFrame(summary.get("期待リターン集計", []))
     time_split_return = summary.get("時系列分割期待リターン", {})
     cost_sensitivity = summary.get("コスト感度分析", {})
+    ticker_cost_adjusted = summary.get("銘柄別コスト後分析", {})
+    ticker_cost_reproducibility = summary.get("銘柄別コスト後再現性", {})
     ticker_summary = pd.DataFrame(summary.get("銘柄別集計", []))
     st.subheader("全銘柄の集計")
     st.dataframe(overall, use_container_width=True, hide_index=True)
@@ -417,6 +419,35 @@ def show_risk_backtest_tab():
     )
     st.dataframe(
         pd.DataFrame(cost_sensitivity.get("集計", [])),
+        use_container_width=True,
+        hide_index=True,
+    )
+    st.subheader("銘柄別のコスト後リターン（後半30%）")
+    st.caption(
+        "-5%損失ライン・往復コスト0.1%の保守ケースです。"
+        "検証件数と平均リターンを併せて確認し、単一銘柄の偶然に依存しないかを確認します。"
+    )
+    st.dataframe(
+        pd.DataFrame(ticker_cost_adjusted.get("集計", [])),
+        use_container_width=True,
+        hide_index=True,
+    )
+    st.subheader("前半選定銘柄の後半再現性")
+    st.caption(
+        f"分割日: {ticker_cost_reproducibility.get('分割日', '不明')}。"
+        "前半70%でのみ採用候補を決め、後半30%は採用根拠に使わず検証します。"
+    )
+    reproducibility_metrics = st.columns(2)
+    reproducibility_metrics[0].metric(
+        "前半の採用候補数",
+        ticker_cost_reproducibility.get("前半採用候補数", 0),
+    )
+    reproducibility_metrics[1].metric(
+        "後半でプラスを維持",
+        ticker_cost_reproducibility.get("後半でプラス維持した銘柄数", 0),
+    )
+    st.dataframe(
+        pd.DataFrame(ticker_cost_reproducibility.get("集計", [])),
         use_container_width=True,
         hide_index=True,
     )
