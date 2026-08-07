@@ -385,6 +385,7 @@ def show_risk_backtest_tab():
     event_order = pd.DataFrame(summary.get("先後判定集計", []))
     expected_return = pd.DataFrame(summary.get("期待リターン集計", []))
     time_split_return = summary.get("時系列分割期待リターン", {})
+    cost_sensitivity = summary.get("コスト感度分析", {})
     ticker_summary = pd.DataFrame(summary.get("銘柄別集計", []))
     st.subheader("全銘柄の集計")
     st.dataframe(overall, use_container_width=True, hide_index=True)
@@ -406,6 +407,16 @@ def show_risk_backtest_tab():
     )
     st.dataframe(
         pd.DataFrame(time_split_return.get("集計", [])),
+        use_container_width=True,
+        hide_index=True,
+    )
+    st.subheader("往復コストを差し引いた感度分析")
+    st.caption(
+        "往復コストは売買手数料・スプレッド・約定ずれを合計した仮定値です。"
+        "実際のコストは証券会社・銘柄・注文方法により異なります。"
+    )
+    st.dataframe(
+        pd.DataFrame(cost_sensitivity.get("集計", [])),
         use_container_width=True,
         hide_index=True,
     )

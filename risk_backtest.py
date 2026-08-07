@@ -17,6 +17,7 @@ REPORT_PATH = PROJECT_ROOT / "reports" / "risk_backtest_summary.json"
 LOOKAHEAD_DAYS = 20
 TARGET_RETURN_PCT = 2.0
 STOP_LOSS_PCTS = (3.0, 5.0)
+ROUND_TRIP_COST_PCTS = (0.0, 0.1, 0.2, 0.3)
 
 
 def summarize_records(records: pd.DataFrame, group_column: str) -> list[dict]:
@@ -123,6 +124,33 @@ def summarize_time_split_returns(records: pd.DataFrame) -> dict:
     return {"分割日": split_date, "集計": summaries}
 
 
+def summarize_cost_sensitivity(records: pd.DataFrame) -> dict:
+    """往復コストを差し引いた保守ケースのリターンを比較する。"""
+    trade_dates = sorted(records["取引日"].unique().tolist())
+    split_index = max(0, int(len(trade_dates) * 0.7) - 1)
+    split_date = trade_dates[split_index]
+    periods = [
+        ("全期間", records),
+        ("後半30%", records[records["取引日"] > split_date]),
+    ]
+    summaries = []
+
+    for stop_loss_pct in STOP_LOSS_PCTS:
+        column = f"-{int(stop_loss_pct)}%保守リターン(%)"
+        for period_name, period_records in periods:
+            for cost_pct in ROUND_TRIP_COST_PCTS:
+                net_return = period_records[column] - cost_pct
+                summaries.append({
+                    "損失ライン": f"-{int(stop_loss_pct)}%",
+                    "検証期間": period_name,
+                    "往復コスト(%)": cost_pct,
+                    "コスト後平均リターン(%)": round(net_return.mean(), 3),
+                    "コスト後勝率(%)": round((net_return > 0).mean() * 100, 2),
+                })
+
+    return {"分割日": split_date, "集計": summaries}
+
+
 def main() -> None:
     """2年分の日足を使ってリスク指標を保存する。"""
     prices = yf.download(
@@ -189,6 +217,7 @@ def main() -> None:
             *summarize_expected_return(frame, 5.0),
         ],
         "時系列分割期待リターン": summarize_time_split_returns(frame),
+        "コスト感度分析": summarize_cost_sensitivity(frame),
         "銘柄別集計": summarize_records(frame, "銘柄コード"),
     }
     REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
