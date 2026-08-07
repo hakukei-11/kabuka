@@ -195,6 +195,8 @@ def analyze_dataframe(
         "25MA": round(latest_ma, 1),
         "20日高値": round(latest_high20, 1),
         "20日安値": round(latest_low20, 1),
+        "25MAタッチ": is_25ma_touch,
+        "20日安値タッチ": is_box_bottom_touch,
         "判定": judgment,
         "反発確度スコア": score,
     }

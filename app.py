@@ -479,6 +479,54 @@ def show_risk_backtest_tab():
     st.caption("同一日に利確価格と損失価格の両方へ到達した順序は、日足だけでは判定できません。")
 
 
+def show_validated_candidates_tab(results_df: pd.DataFrame):
+    """過去検証で再現性を確認した20日安値タッチ銘柄を表示する。"""
+    st.header("検証済み分析候補（20日安値タッチ）")
+    st.caption(
+        "過去2年・20取引日の検証で、-5%損失ラインと往復コスト0.1%を仮定した場合に、"
+        "後半30%でも平均リターンがプラスだった条件です。"
+    )
+    st.warning(
+        "これは過去データに基づく分析候補であり、売買の推奨や将来の利益を保証するものではありません。"
+    )
+
+    candidates = results_df[results_df["20日安値タッチ"]].copy()
+    if candidates.empty:
+        st.info("本日の分析結果には、20日安値タッチの銘柄はありません。")
+        return
+
+    candidates["20日安値からの乖離(%)"] = (
+        (candidates["終値"] - candidates["20日安値"])
+        / candidates["20日安値"]
+        * 100
+    ).round(2)
+    candidates = candidates.sort_values(
+        ["反発確度スコア", "RSI"],
+        ascending=[False, True],
+    )
+    metric_columns = st.columns(2)
+    metric_columns[0].metric("本日の該当銘柄数", len(candidates))
+    metric_columns[1].metric("参考コスト仮定", "往復 0.1%")
+    display_columns = [
+        "銘柄コード",
+        "銘柄名",
+        "取引日",
+        "終値",
+        "20日安値",
+        "20日安値からの乖離(%)",
+        "RSI",
+        "MACD",
+        "Signal",
+        "反発確度スコア",
+        "判定",
+    ]
+    st.dataframe(
+        candidates.reindex(columns=display_columns),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+
 @st.cache_data(ttl=3600, show_spinner=False)
 def analyze_all_tickers():
     """全対象銘柄を一括取得し、共通分析エンジンで評価する。"""
@@ -515,8 +563,7 @@ def analyze_all_tickers():
 
         chart_data[ticker] = analyzed_df
 
-        if result["反発確度スコア"] >= SCORE_DISPLAY_THRESHOLD:
-            results.append(result)
+        results.append(result)
 
     return results, chart_data
 
@@ -608,10 +655,13 @@ with st.spinner("全銘柄を分析しています..."):
     results, chart_data = analyze_all_tickers()
 
 if results:
-    results_df = pd.DataFrame(results).sort_values(
+    all_results_df = pd.DataFrame(results).sort_values(
         "反発確度スコア",
         ascending=False,
     )
+    results_df = all_results_df[
+        all_results_df["反発確度スコア"] >= SCORE_DISPLAY_THRESHOLD
+    ].copy()
     japan_df = results_df[
         results_df["銘柄コード"].str.endswith(".T")
     ].copy()
@@ -619,16 +669,18 @@ if results:
         ~results_df["銘柄コード"].str.endswith(".T")
     ].copy()
 else:
+    all_results_df = pd.DataFrame()
     japan_df = pd.DataFrame()
     us_df = pd.DataFrame()
 
-japan_tab, us_tab, backtest_tab, historical_backtest_tab, risk_backtest_tab = st.tabs(
+japan_tab, us_tab, backtest_tab, historical_backtest_tab, risk_backtest_tab, candidates_tab = st.tabs(
     [
         f"🇯🇵 日本株（{len(japan_df)}銘柄）",
         f"🇺🇸 米国株（{len(us_df)}銘柄）",
         "📈 バックテスト",
         "🕰️ 過去データ検証",
         "⚖️ リスク検証",
+        "検証済み候補",
     ]
 )
 
@@ -647,6 +699,9 @@ with us_tab:
         tab_name="🇺🇸 米国株",
         key="us",
     )
+
+with candidates_tab:
+    show_validated_candidates_tab(all_results_df)
 
 with backtest_tab:
     show_backtest_tab()
