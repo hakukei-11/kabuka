@@ -383,6 +383,7 @@ def show_risk_backtest_tab():
     )
     overall = pd.DataFrame(summary.get("全体集計", []))
     event_order = pd.DataFrame(summary.get("先後判定集計", []))
+    expected_return = pd.DataFrame(summary.get("期待リターン集計", []))
     ticker_summary = pd.DataFrame(summary.get("銘柄別集計", []))
     st.subheader("全銘柄の集計")
     st.dataframe(overall, use_container_width=True, hide_index=True)
@@ -390,6 +391,12 @@ def show_risk_backtest_tab():
     st.dataframe(event_order, use_container_width=True, hide_index=True)
     st.caption(
         "保守成功率は同日両方到達を失敗扱い、楽観成功率は成功扱いにした範囲です。"
+    )
+    st.subheader("ルール別の期待リターン")
+    st.dataframe(expected_return, use_container_width=True, hide_index=True)
+    st.caption(
+        "未到達は20日後の終値で決済した場合の実績リターンです。"
+        "手数料・税金・スリッページは含みません。"
     )
     st.subheader("銘柄別の集計")
     st.dataframe(ticker_summary, use_container_width=True, hide_index=True)

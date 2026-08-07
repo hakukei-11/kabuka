@@ -70,6 +70,30 @@ def summarize_event_order(records: pd.DataFrame, stop_loss_pct: float) -> list[d
     }]
 
 
+def summarize_expected_return(records: pd.DataFrame, stop_loss_pct: float) -> list[dict]:
+    """利確・損失・未到達時の決済結果から期待リターンを集計する。"""
+    stop_label = f"-{int(stop_loss_pct)}%"
+    conservative_column = f"{stop_label}保守リターン(%)"
+    optimistic_column = f"{stop_label}楽観リターン(%)"
+    event_column = f"+2%対-{int(stop_loss_pct)}%先後"
+    no_event = records[records[event_column] == "未到達"]
+    conservative = records[conservative_column]
+    optimistic = records[optimistic_column]
+
+    return [{
+        "損失ライン": stop_label,
+        "保守平均リターン(%)": round(conservative.mean(), 3),
+        "楽観平均リターン(%)": round(optimistic.mean(), 3),
+        "保守勝率(%)": round((conservative > 0).mean() * 100, 2),
+        "楽観勝率(%)": round((optimistic > 0).mean() * 100, 2),
+        "未到達件数": int(len(no_event)),
+        "未到達時平均リターン(%)": round(
+            no_event["20日後リターン(%)"].mean(),
+            3,
+        ) if not no_event.empty else None,
+    }]
+
+
 def main() -> None:
     """2年分の日足を使ってリスク指標を保存する。"""
     prices = yf.download(
@@ -104,6 +128,22 @@ def main() -> None:
                     target_price=entry * (1 + TARGET_RETURN_PCT / 100),
                     stop_price=entry * (1 - stop_loss_pct / 100),
                 )
+                event = record[f"+2%対-{int(stop_loss_pct)}%先後"]
+                stop_label = f"-{int(stop_loss_pct)}%"
+                if event == "利確先行":
+                    conservative_return = TARGET_RETURN_PCT
+                    optimistic_return = TARGET_RETURN_PCT
+                elif event == "損失先行":
+                    conservative_return = -stop_loss_pct
+                    optimistic_return = -stop_loss_pct
+                elif event == "同日両方":
+                    conservative_return = -stop_loss_pct
+                    optimistic_return = TARGET_RETURN_PCT
+                else:
+                    conservative_return = record["20日後リターン(%)"]
+                    optimistic_return = record["20日後リターン(%)"]
+                record[f"{stop_label}保守リターン(%)"] = conservative_return
+                record[f"{stop_label}楽観リターン(%)"] = optimistic_return
             records.append(record)
     frame = pd.DataFrame(records)
     summary = {
@@ -113,6 +153,10 @@ def main() -> None:
         "先後判定集計": [
             *summarize_event_order(frame, 3.0),
             *summarize_event_order(frame, 5.0),
+        ],
+        "期待リターン集計": [
+            *summarize_expected_return(frame, 3.0),
+            *summarize_expected_return(frame, 5.0),
         ],
         "銘柄別集計": summarize_records(frame, "銘柄コード"),
     }
