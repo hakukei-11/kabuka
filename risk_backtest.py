@@ -274,6 +274,37 @@ def summarize_condition_cost_reproducibility(records: pd.DataFrame) -> dict:
     }
 
 
+def summarize_low20_cost_sensitivity(records: pd.DataFrame) -> dict:
+    """20日安値タッチ条件のコスト感度を前半・後半で確認する。"""
+    trade_dates = sorted(records["取引日"].unique().tolist())
+    split_index = max(0, int(len(trade_dates) * 0.7) - 1)
+    split_date = trade_dates[split_index]
+    low20_records = records[records["20日安値タッチ"]]
+    return_column = f"-{int(REFERENCE_STOP_LOSS_PCT)}%保守リターン(%)"
+    periods = [
+        ("全期間", low20_records),
+        ("前半70%", low20_records[low20_records["取引日"] <= split_date]),
+        ("後半30%", low20_records[low20_records["取引日"] > split_date]),
+    ]
+    summaries = []
+
+    for period_name, period_records in periods:
+        for cost_pct in ROUND_TRIP_COST_PCTS:
+            net_return = period_records[return_column] - cost_pct
+            summaries.append({
+                "条件": "20日安値タッチ",
+                "損失ライン": f"-{int(REFERENCE_STOP_LOSS_PCT)}%",
+                "検証期間": period_name,
+                "検証件数": int(len(period_records)),
+                "往復コスト(%)": cost_pct,
+                "コスト後平均リターン(%)": round(net_return.mean(), 3),
+                "コスト後勝率(%)": round((net_return > 0).mean() * 100, 2),
+                "判定": "プラス" if net_return.mean() > 0 else "マイナス",
+            })
+
+    return {"分割日": split_date, "集計": summaries}
+
+
 def main() -> None:
     """2年分の日足を使ってリスク指標を保存する。"""
     prices = yf.download(
@@ -351,6 +382,7 @@ def main() -> None:
         "銘柄別コスト後分析": summarize_ticker_cost_adjusted_returns(frame),
         "銘柄別コスト後再現性": summarize_ticker_cost_reproducibility(frame),
         "条件別コスト後再現性": summarize_condition_cost_reproducibility(frame),
+        "20日安値コスト感度": summarize_low20_cost_sensitivity(frame),
         "銘柄別集計": summarize_records(frame, "銘柄コード"),
     }
     REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
