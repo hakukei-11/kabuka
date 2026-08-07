@@ -47,6 +47,42 @@ def send_line(message: str):
         print(f"LINE送信エラー: {error}")
 
 
+def build_validated_candidates_message(
+    results: list[dict],
+    trade_date: str,
+) -> str:
+    """20日安値タッチの分析候補をLINE通知用の文面に整形する。"""
+    candidates = [
+        result for result in results
+        if result.get("20日安値タッチ") is True
+    ]
+    if not candidates:
+        return (
+            f"取引日: {trade_date}\n"
+            "20日安値タッチの分析候補: なし\n"
+            "※過去検証に基づく分析条件であり、売買推奨ではありません。"
+        )
+
+    lines = [
+        f"取引日: {trade_date}",
+        f"20日安値タッチの分析候補: {len(candidates)}件",
+    ]
+    for result in candidates[:10]:
+        lines.append(
+            "- {name}（{ticker}）終値: {close} / RSI: {rsi} / スコア: {score}".format(
+                name=result["銘柄名"],
+                ticker=result["銘柄コード"],
+                close=result["終値"],
+                rsi=result["RSI"],
+                score=result["反発確度スコア"],
+            )
+        )
+    if len(candidates) > 10:
+        lines.append(f"ほか {len(candidates) - 10}件")
+    lines.append("※過去検証に基づく分析条件であり、売買推奨ではありません。")
+    return "\n".join(lines)
+
+
 def main():
     """全銘柄を分析し、日次CSVを保存する。"""
     analysis_executed_at = get_analysis_executed_at()
@@ -109,7 +145,11 @@ def main():
     send_line(
         "株価分析CSVを保存しました。\n"
         f"ファイル: {file_path}\n"
-        f"分析実行日時: {analysis_executed_at}"
+        f"分析実行日時: {analysis_executed_at}\n\n"
+        + build_validated_candidates_message(
+            results=results,
+            trade_date=results[0]["取引日"],
+        )
     )
 
 
