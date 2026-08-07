@@ -571,6 +571,47 @@ def show_validated_candidates_tab(results_df: pd.DataFrame):
     )
 
 
+def show_all_tickers_tab(
+    results_df: pd.DataFrame,
+    missing_tickers: list[dict],
+):
+    """スコアで絞り込まない全銘柄の取得結果を表示する。"""
+    st.header("全銘柄確認")
+    st.caption(
+        "スコアの閾値を適用せず、対象銘柄が取得・分析できているかを確認するための一覧です。"
+    )
+    metric_columns = st.columns(3)
+    metric_columns[0].metric("設定銘柄数", len(TICKERS))
+    metric_columns[1].metric("取得・分析済み", len(results_df))
+    metric_columns[2].metric("未取得・分析不可", len(missing_tickers))
+
+    display_columns = [
+        "銘柄コード",
+        "銘柄名",
+        "取引日",
+        "終値",
+        "RSI",
+        "MACD",
+        "Signal",
+        "25MAタッチ",
+        "20日安値タッチ",
+        "反発確度スコア",
+        "判定",
+    ]
+    st.dataframe(
+        results_df.reindex(columns=display_columns),
+        use_container_width=True,
+        hide_index=True,
+    )
+    if missing_tickers:
+        st.warning("取得または分析できなかった銘柄があります。")
+        st.dataframe(
+            pd.DataFrame(missing_tickers),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+
 @st.cache_data(ttl=3600, show_spinner=False)
 def analyze_all_tickers():
     """全対象銘柄を一括取得し、共通分析エンジンで評価する。"""
@@ -588,11 +629,13 @@ def analyze_all_tickers():
 
     results = []
     chart_data = {}
+    missing_tickers = []
 
     for ticker, name in TICKERS.items():
         try:
             ticker_df = downloaded_data[ticker].dropna(how="all")
         except (KeyError, TypeError):
+            missing_tickers.append({"銘柄コード": ticker, "銘柄名": name})
             continue
 
         result, analyzed_df = analyze_dataframe(
@@ -603,13 +646,14 @@ def analyze_all_tickers():
         )
 
         if result is None or analyzed_df is None:
+            missing_tickers.append({"銘柄コード": ticker, "銘柄名": name})
             continue
 
         chart_data[ticker] = analyzed_df
 
         results.append(result)
 
-    return results, chart_data
+    return results, chart_data, missing_tickers
 
 
 def show_stock_tab(
@@ -696,7 +740,7 @@ show_update_status()
 st.divider()
 
 with st.spinner("全銘柄を分析しています..."):
-    results, chart_data = analyze_all_tickers()
+    results, chart_data, missing_tickers = analyze_all_tickers()
 
 if results:
     all_results_df = pd.DataFrame(results).sort_values(
@@ -717,7 +761,7 @@ else:
     japan_df = pd.DataFrame()
     us_df = pd.DataFrame()
 
-japan_tab, us_tab, backtest_tab, historical_backtest_tab, risk_backtest_tab, candidates_tab = st.tabs(
+japan_tab, us_tab, backtest_tab, historical_backtest_tab, risk_backtest_tab, candidates_tab, all_tickers_tab = st.tabs(
     [
         f"🇯🇵 日本株（{len(japan_df)}銘柄）",
         f"🇺🇸 米国株（{len(us_df)}銘柄）",
@@ -725,6 +769,7 @@ japan_tab, us_tab, backtest_tab, historical_backtest_tab, risk_backtest_tab, can
         "🕰️ 過去データ検証",
         "⚖️ リスク検証",
         "検証済み候補",
+        "全銘柄確認",
     ]
 )
 
@@ -746,6 +791,9 @@ with us_tab:
 
 with candidates_tab:
     show_validated_candidates_tab(all_results_df)
+
+with all_tickers_tab:
+    show_all_tickers_tab(all_results_df, missing_tickers)
 
 with backtest_tab:
     show_backtest_tab()

@@ -1,5 +1,7 @@
 # tickers.py
-# 大型株TOP100（日本）＋大型株TOP100（米国）＝200銘柄
+
+# 大型株を中心とした日本株・米国株の分析対象銘柄。
+# 拡張銘柄は購入推奨ではなく、流動性と業種分散を考慮した分析対象である。
 
 TICKERS = {
 
@@ -66,7 +68,6 @@ TICKERS = {
     "5214.T": "日本電気硝子",
     "5332.T": "TOTO",
     "5406.T": "神戸製鋼所",
-    "5413.T": "日鉄物産",
     "5713.T": "住友金属鉱山",
     "5802.T": "住友電気工業",
     "5803.T": "フジクラ",
@@ -89,7 +90,6 @@ TICKERS = {
     "6770.T": "アルプスアルパイン",
     "6841.T": "横河電機",
     "6857.T": "アドバンテスト",
-    "6901.T": "日立メタル",
     "6954.T": "ファナック",
     "6971.T": "京セラ",
     "7011.T": "三菱重工業",
@@ -112,6 +112,18 @@ TICKERS = {
     "9022.T": "JR東海",
     "9021.T": "JR西日本",
 
+    # --- 成長系の追加分析対象（日本） ---
+    "3697.T": "SHIFT",
+    "3993.T": "PKSHA Technology",
+    "4385.T": "メルカリ",
+    "4443.T": "Sansan",
+    "4478.T": "freee",
+    "4480.T": "メドレー",
+    "5032.T": "ANYCOLOR",
+    "5246.T": "ELEMENTS",
+    "5253.T": "カバー",
+    "5595.T": "QPS研究所",
+
     # ============================
     # 🇺🇸 米国株（S&P500 時価総額上位100）
     # ============================
@@ -124,7 +136,7 @@ TICKERS = {
     "GOOGL": "Alphabet Class A",
     "GOOG": "Alphabet Class C",
     "TSLA": "Tesla",
-    "BRK.B": "Berkshire Hathaway",
+    "BRK-B": "Berkshire Hathaway",
     "UNH": "UnitedHealth Group",
     "XOM": "Exxon Mobil",
     "JNJ": "Johnson & Johnson",
@@ -211,5 +223,17 @@ TICKERS = {
     "ETN": "Eaton",
     "EMR": "Emerson Electric",
     "ROST": "Ross Stores",
-    "TJX": "TJX Companies"
+    "TJX": "TJX Companies",
+
+    # --- 成長系の追加分析対象（米国） ---
+    "ABNB": "Airbnb",
+    "CRWD": "CrowdStrike",
+    "DDOG": "Datadog",
+    "MDB": "MongoDB",
+    "MELI": "MercadoLibre",
+    "NET": "Cloudflare",
+    "PLTR": "Palantir Technologies",
+    "SHOP": "Shopify",
+    "SNOW": "Snowflake",
+    "UBER": "Uber Technologies",
 }
