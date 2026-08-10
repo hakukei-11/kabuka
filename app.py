@@ -435,6 +435,7 @@ def show_risk_backtest_tab():
     ticker_cost_reproducibility = summary.get("銘柄別コスト後再現性", {})
     condition_cost_reproducibility = summary.get("条件別コスト後再現性", {})
     low20_cost_sensitivity = summary.get("20日安値コスト感度", {})
+    initial_rebound_cost_sensitivity = summary.get("反発初動コスト感度", {})
     ticker_summary = pd.DataFrame(summary.get("銘柄別集計", []))
     st.subheader("全銘柄の集計")
     st.dataframe(overall, use_container_width=True, hide_index=True)
@@ -516,6 +517,16 @@ def show_risk_backtest_tab():
     )
     st.dataframe(
         pd.DataFrame(low20_cost_sensitivity.get("集計", [])),
+        use_container_width=True,
+        hide_index=True,
+    )
+    st.subheader("反発初動のコスト感度")
+    st.caption(
+        f"分割日: {initial_rebound_cost_sensitivity.get('分割日', '不明')}。"
+        "20日安値タッチ・陽線・終値位置70%以上の条件について、往復コストの仮定を変えて確認します。"
+    )
+    st.dataframe(
+        pd.DataFrame(initial_rebound_cost_sensitivity.get("集計", [])),
         use_container_width=True,
         hide_index=True,
     )

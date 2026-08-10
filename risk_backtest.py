@@ -276,17 +276,21 @@ def summarize_condition_cost_reproducibility(records: pd.DataFrame) -> dict:
     }
 
 
-def summarize_low20_cost_sensitivity(records: pd.DataFrame) -> dict:
-    """20日安値タッチ条件のコスト感度を前半・後半で確認する。"""
+def summarize_condition_cost_sensitivity(
+    records: pd.DataFrame,
+    condition_column: str,
+    condition_name: str,
+) -> dict:
+    """指定した条件のコスト感度を前半・後半で確認する。"""
     trade_dates = sorted(records["取引日"].unique().tolist())
     split_index = max(0, int(len(trade_dates) * 0.7) - 1)
     split_date = trade_dates[split_index]
-    low20_records = records[records["20日安値タッチ"]]
+    condition_records = records[records[condition_column]]
     return_column = f"-{int(REFERENCE_STOP_LOSS_PCT)}%保守リターン(%)"
     periods = [
-        ("全期間", low20_records),
-        ("前半70%", low20_records[low20_records["取引日"] <= split_date]),
-        ("後半30%", low20_records[low20_records["取引日"] > split_date]),
+        ("全期間", condition_records),
+        ("前半70%", condition_records[condition_records["取引日"] <= split_date]),
+        ("後半30%", condition_records[condition_records["取引日"] > split_date]),
     ]
     summaries = []
 
@@ -294,7 +298,7 @@ def summarize_low20_cost_sensitivity(records: pd.DataFrame) -> dict:
         for cost_pct in ROUND_TRIP_COST_PCTS:
             net_return = period_records[return_column] - cost_pct
             summaries.append({
-                "条件": "20日安値タッチ",
+                "条件": condition_name,
                 "損失ライン": f"-{int(REFERENCE_STOP_LOSS_PCT)}%",
                 "検証期間": period_name,
                 "検証件数": int(len(period_records)),
@@ -305,6 +309,24 @@ def summarize_low20_cost_sensitivity(records: pd.DataFrame) -> dict:
             })
 
     return {"分割日": split_date, "集計": summaries}
+
+
+def summarize_low20_cost_sensitivity(records: pd.DataFrame) -> dict:
+    """20日安値タッチ条件のコスト感度を確認する。"""
+    return summarize_condition_cost_sensitivity(
+        records=records,
+        condition_column="20日安値タッチ",
+        condition_name="20日安値タッチ",
+    )
+
+
+def summarize_initial_rebound_cost_sensitivity(records: pd.DataFrame) -> dict:
+    """反発初動条件のコスト感度を確認する。"""
+    return summarize_condition_cost_sensitivity(
+        records=records,
+        condition_column="反発初動",
+        condition_name="反発初動",
+    )
 
 
 def main() -> None:
@@ -391,6 +413,7 @@ def main() -> None:
         "銘柄別コスト後再現性": summarize_ticker_cost_reproducibility(frame),
         "条件別コスト後再現性": summarize_condition_cost_reproducibility(frame),
         "20日安値コスト感度": summarize_low20_cost_sensitivity(frame),
+        "反発初動コスト感度": summarize_initial_rebound_cost_sensitivity(frame),
         "銘柄別集計": summarize_records(frame, "銘柄コード"),
     }
     REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
