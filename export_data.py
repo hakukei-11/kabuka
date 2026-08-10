@@ -63,13 +63,25 @@ def build_validated_candidates_message(
             "※過去検証に基づく分析条件であり、売買推奨ではありません。"
         )
 
+    initial_rebounds = [
+        result for result in candidates
+        if result.get("反発初動") is True
+    ]
+    other_candidates = [
+        result for result in candidates
+        if result.get("反発初動") is not True
+    ]
     lines = [
         f"取引日: {trade_date}",
         f"20日安値タッチの分析候補: {len(candidates)}件",
     ]
-    for result in candidates[:10]:
+    if initial_rebounds:
+        lines.append(f"反発初動（優先確認）: {len(initial_rebounds)}件")
+    for result in (initial_rebounds + other_candidates)[:10]:
+        priority = "【反発初動】" if result.get("反発初動") is True else ""
         lines.append(
-            "- {name}（{ticker}）終値: {close} / RSI: {rsi} / スコア: {score}".format(
+            "- {priority}{name}（{ticker}）終値: {close} / RSI: {rsi} / スコア: {score}".format(
+                priority=priority,
                 name=result["銘柄名"],
                 ticker=result["銘柄コード"],
                 close=result["終値"],

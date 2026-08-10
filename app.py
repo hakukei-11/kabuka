@@ -556,9 +556,12 @@ def show_validated_candidates_tab(results_df: pd.DataFrame):
         / candidates["20日安値"]
         * 100
     ).round(2)
+    candidates["優先順位"] = candidates["反発初動"].map(
+        {True: "反発初動（優先確認）", False: "20日安値タッチ"}
+    )
     candidates = candidates.sort_values(
-        ["反発確度スコア", "RSI"],
-        ascending=[False, True],
+        ["反発初動", "反発確度スコア", "RSI"],
+        ascending=[False, False, True],
     )
     metric_columns = st.columns(2)
     metric_columns[0].metric("本日の該当銘柄数", len(candidates))
@@ -568,6 +571,7 @@ def show_validated_candidates_tab(results_df: pd.DataFrame):
     display_columns = [
         "銘柄コード",
         "銘柄名",
+        "優先順位",
         "取引日",
         "終値",
         "20日安値",
