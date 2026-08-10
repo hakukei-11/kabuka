@@ -51,6 +51,16 @@ def prepare_dataframe(df: pd.DataFrame) -> pd.DataFrame | None:
         ((data["Close"] - data["Low20"]).abs() / data["Low20"] * 100)
         <= THRESHOLD
     )
+    daily_range = data["High"] - data["Low"]
+    data["終値位置(%)"] = (
+        (data["Close"] - data["Low"]) / daily_range * 100
+    ).where(daily_range > 0, 50.0)
+    data["陽線"] = data["Close"] > data["Open"]
+    data["反発初動"] = (
+        data["20日安値タッチ"]
+        & data["陽線"]
+        & (data["終値位置(%)"] >= 70)
+    )
     data["RSI40以下"] = data["RSI"] <= 40
     data["MACDシグナル以下"] = data["MACD"] <= data["Signal"]
 
@@ -197,6 +207,9 @@ def analyze_dataframe(
         "20日安値": round(latest_low20, 1),
         "25MAタッチ": is_25ma_touch,
         "20日安値タッチ": is_box_bottom_touch,
+        "陽線": bool(data["陽線"].iloc[-1]),
+        "終値位置(%)": round(float(data["終値位置(%)"].iloc[-1]), 1),
+        "反発初動": bool(data["反発初動"].iloc[-1]),
         "判定": judgment,
         "反発確度スコア": score,
     }

@@ -15,6 +15,7 @@ from tickers import TICKERS
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 REPORT_PATH = PROJECT_ROOT / "reports" / "risk_backtest_summary.json"
+HISTORY_PERIOD = "5y"
 LOOKAHEAD_DAYS = 20
 TARGET_RETURN_PCT = 2.0
 STOP_LOSS_PCTS = (3.0, 5.0)
@@ -246,6 +247,7 @@ def summarize_condition_cost_reproducibility(records: pd.DataFrame) -> dict:
             lambda frame: frame[frame["RSI40以下"] & frame["MACDシグナル以下"]],
         ),
         ("20日安値タッチ", lambda frame: frame[frame["20日安値タッチ"]]),
+        ("反発初動", lambda frame: frame[frame["反発初動"]]),
     ]
     summaries = []
 
@@ -306,9 +308,9 @@ def summarize_low20_cost_sensitivity(records: pd.DataFrame) -> dict:
 
 
 def main() -> None:
-    """2年分の日足を使ってリスク指標を保存する。"""
+    """過去5年分の日足を使ってリスク指標を保存する。"""
     prices = yf.download(
-        list(TICKERS.keys()), period="2y", group_by="ticker",
+        list(TICKERS.keys()), period=HISTORY_PERIOD, group_by="ticker",
         threads=True, auto_adjust=True, progress=False,
     )
     records = []
@@ -335,6 +337,7 @@ def main() -> None:
                 "20日後リターン(%)": ((float(future["Close"].iloc[-1]) - entry) / entry) * 100,
                 "25MAタッチ": bool(data["25MAタッチ"].iloc[index]),
                 "20日安値タッチ": bool(data["20日安値タッチ"].iloc[index]),
+                "反発初動": bool(data["反発初動"].iloc[index]),
                 "RSI40以下": bool(data["RSI40以下"].iloc[index]),
                 "MACDシグナル以下": bool(data["MACDシグナル以下"].iloc[index]),
             }
@@ -367,7 +370,12 @@ def main() -> None:
     frame = pd.DataFrame(records)
     summary = {
         "作成日時UTC": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "検証条件": {"確認期間(取引日)": LOOKAHEAD_DAYS, "利確目標(%)": TARGET_RETURN_PCT, "損失閾値(%)": list(STOP_LOSS_PCTS)},
+        "検証条件": {
+            "取得期間": HISTORY_PERIOD,
+            "確認期間(取引日)": LOOKAHEAD_DAYS,
+            "利確目標(%)": TARGET_RETURN_PCT,
+            "損失閾値(%)": list(STOP_LOSS_PCTS),
+        },
         "全体集計": summarize_records(frame.assign(全体="全銘柄"), "全体"),
         "先後判定集計": [
             *summarize_event_order(frame, 3.0),

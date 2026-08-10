@@ -421,7 +421,8 @@ def show_risk_backtest_tab():
         return
     conditions = summary.get("検証条件", {})
     st.info(
-        f"条件: +{conditions.get('利確目標(%)', 2)}%到達、"
+        f"条件: 過去{conditions.get('取得期間', '2y')}、"
+        f"+{conditions.get('利確目標(%)', 2)}%到達、"
         f"{conditions.get('損失閾値(%)', [3, 5])}%下落、"
         f"{conditions.get('確認期間(取引日)', 20)}取引日を確認します。"
     )
@@ -551,6 +552,8 @@ def show_validated_candidates_tab(results_df: pd.DataFrame):
     metric_columns = st.columns(2)
     metric_columns[0].metric("本日の該当銘柄数", len(candidates))
     metric_columns[1].metric("参考コスト仮定", "往復 0.1%")
+    initial_rebound_count = int(candidates["反発初動"].sum())
+    st.metric("このうち反発初動候補", initial_rebound_count)
     display_columns = [
         "銘柄コード",
         "銘柄名",
@@ -558,6 +561,9 @@ def show_validated_candidates_tab(results_df: pd.DataFrame):
         "終値",
         "20日安値",
         "20日安値からの乖離(%)",
+        "陽線",
+        "終値位置(%)",
+        "反発初動",
         "RSI",
         "MACD",
         "Signal",
@@ -569,6 +575,16 @@ def show_validated_candidates_tab(results_df: pd.DataFrame):
         use_container_width=True,
         hide_index=True,
     )
+    if initial_rebound_count > 0:
+        st.subheader("反発初動候補")
+        st.caption(
+            "20日安値タッチ・陽線・終値が当日値幅の上位70%以上の銘柄です。"
+        )
+        st.dataframe(
+            candidates[candidates["反発初動"]].reindex(columns=display_columns),
+            use_container_width=True,
+            hide_index=True,
+        )
 
 
 def show_all_tickers_tab(
@@ -595,6 +611,9 @@ def show_all_tickers_tab(
         "Signal",
         "25MAタッチ",
         "20日安値タッチ",
+        "陽線",
+        "終値位置(%)",
+        "反発初動",
         "反発確度スコア",
         "判定",
     ]
