@@ -1,0 +1,322 @@
+# high_score_surge_report.py
+
+"""高スコア銘柄の20取引日以内の上昇実績を集計する。"""
+
+import argparse
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+
+import pandas as pd
+import yfinance as yf
+
+from analysis_engine import prepare_dataframe
+from scoring import calc_rebound_score
+from tickers import TICKERS
+
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+REPORT_PATH = PROJECT_ROOT / "reports" / "high_score_surge_summary.json"
+DEFAULT_PERIOD = "5y"
+DEFAULT_LOOKAHEAD_DAYS = 20
+HIGH_SCORE_THRESHOLD = 60
+TARGET_RETURN_PCT = 2.0
+SURGE_RETURN_PCT = 5.0
+
+
+def parse_arguments() -> argparse.Namespace:
+    """コマンドライン引数を取得する。"""
+    parser = argparse.ArgumentParser(
+        description="高スコア銘柄の上昇実績を検証します。"
+    )
+    parser.add_argument("--period", default=DEFAULT_PERIOD)
+    parser.add_argument(
+        "--lookahead-days",
+        type=int,
+        default=DEFAULT_LOOKAHEAD_DAYS,
+    )
+    return parser.parse_args()
+
+
+def create_records(
+    price_data: pd.DataFrame,
+    lookahead_days: int,
+) -> tuple[pd.DataFrame, list[str]]:
+    """60点以上となった日ごとの将来上昇実績を作成する。"""
+    records = []
+    skipped_tickers = []
+
+    for ticker, name in TICKERS.items():
+        try:
+            ticker_data = price_data[ticker].dropna(how="all")
+        except (KeyError, TypeError):
+            skipped_tickers.append(ticker)
+            continue
+
+        data = prepare_dataframe(ticker_data)
+        if data is None or len(data) <= lookahead_days:
+            skipped_tickers.append(ticker)
+            continue
+
+        for index in range(1, len(data) - lookahead_days):
+            row = data.iloc[index]
+            required_values = [
+                row["RSI"],
+                row["MACD"],
+                row["Signal"],
+                row["25MA"],
+                row["Low20"],
+            ]
+            if any(pd.isna(value) for value in required_values):
+                continue
+
+            close = float(row["Close"])
+            previous_close = float(data["Close"].iloc[index - 1])
+            score = calc_rebound_score(
+                is_25ma_touch=bool(row["25MAタッチ"]),
+                is_box_bottom_touch=bool(row["20日安値タッチ"]),
+                rsi=float(row["RSI"]),
+                macd=float(row["MACD"]),
+                signal=float(row["Signal"]),
+                close_today=close,
+                close_yesterday=previous_close,
+            )
+            if score < HIGH_SCORE_THRESHOLD:
+                continue
+
+            future_close = data["Close"].iloc[
+                index + 1:index + 1 + lookahead_days
+            ]
+            max_future_close = float(future_close.max())
+            max_return_pct = (max_future_close / close - 1) * 100
+            reached_2pct = future_close[
+                future_close >= close * (1 + TARGET_RETURN_PCT / 100)
+            ]
+            days_to_2pct = (
+                int((reached_2pct.index[0] - data.index[index]).days)
+                if not reached_2pct.empty
+                else None
+            )
+
+            records.append(
+                {
+                    "銘柄コード": ticker,
+                    "銘柄名": name,
+                    "判定日": pd.Timestamp(
+                        data.index[index]
+                    ).strftime("%Y-%m-%d"),
+                    "反発確度スコア": score,
+                    "反発初動": bool(row["反発初動"]),
+                    "RSI": round(float(row["RSI"]), 2),
+                    "MACD": round(float(row["MACD"]), 3),
+                    "Signal": round(float(row["Signal"]), 3),
+                    "最大上昇率(%)": round(max_return_pct, 3),
+                    "2%到達": not reached_2pct.empty,
+                    "2%到達日数": days_to_2pct,
+                    "5%以上上昇": max_return_pct >= SURGE_RETURN_PCT,
+                }
+            )
+
+    return pd.DataFrame(records), skipped_tickers
+
+
+def summarize_condition(group: pd.DataFrame, condition_name: str) -> dict:
+    """指定条件の高スコア銘柄における上昇実績を集計する。"""
+    if group.empty:
+        return {
+            "条件": condition_name,
+            "高スコア件数": 0,
+            "2%到達率(%)": None,
+            "5%以上上昇率(%)": None,
+            "平均最大上昇率(%)": None,
+        }
+
+    return {
+        "条件": condition_name,
+        "高スコア件数": int(len(group)),
+        "2%到達率(%)": round(float(group["2%到達"].mean() * 100), 2),
+        "5%以上上昇率(%)": round(
+            float(group["5%以上上昇"].mean() * 100),
+            2,
+        ),
+        "平均最大上昇率(%)": round(
+            float(group["最大上昇率(%)"].mean()),
+            3,
+        ),
+    }
+
+
+def summarize_tickers(records: pd.DataFrame) -> list[dict]:
+    """銘柄ごとの高スコア時の上昇実績を集計する。"""
+    summaries = []
+
+    for ticker, group in records.groupby("銘柄コード", sort=True):
+        summaries.append(
+            {
+                "銘柄コード": ticker,
+                "銘柄名": group["銘柄名"].iloc[0],
+                "高スコア件数": int(len(group)),
+                "平均スコア": round(
+                    float(group["反発確度スコア"].mean()),
+                    2,
+                ),
+                "2%到達率(%)": round(
+                    float(group["2%到達"].mean() * 100),
+                    2,
+                ),
+                "5%以上上昇率(%)": round(
+                    float(group["5%以上上昇"].mean() * 100),
+                    2,
+                ),
+                "平均最大上昇率(%)": round(
+                    float(group["最大上昇率(%)"].mean()),
+                    3,
+                ),
+            }
+        )
+
+    return sorted(
+        summaries,
+        key=lambda item: (
+            item["5%以上上昇率(%)"],
+            item["平均最大上昇率(%)"],
+        ),
+        reverse=True,
+    )
+
+
+def create_summary(
+    records: pd.DataFrame,
+    skipped_tickers: list[str],
+    period: str,
+    lookahead_days: int,
+) -> dict:
+    """画面表示用の高スコア高騰レポートを作成する。"""
+    reached_2pct_rate = (
+        float(records["2%到達"].mean() * 100)
+        if not records.empty
+        else None
+    )
+    surged_rate = (
+        float(records["5%以上上昇"].mean() * 100)
+        if not records.empty
+        else None
+    )
+    top_examples = records.sort_values(
+        "最大上昇率(%)",
+        ascending=False,
+    ).head(30)
+    initial_rebounds = records[records["反発初動"]]
+    non_initial_rebounds = records[~records["反発初動"]]
+
+    return {
+        "作成日時UTC": datetime.now(timezone.utc).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        ),
+        "検証条件": {
+            "取得期間": period,
+            "確認期間(取引日)": lookahead_days,
+            "高スコア閾値": HIGH_SCORE_THRESHOLD,
+            "2%到達基準(%)": TARGET_RETURN_PCT,
+            "高騰基準(最大終値上昇率%)": SURGE_RETURN_PCT,
+            "注意事項": (
+                "終値ベースの過去検証であり、"
+                "将来の上昇を保証しません。"
+            ),
+        },
+        "全体集計": {
+            "高スコア件数": int(len(records)),
+            "2%到達率(%)": round(reached_2pct_rate, 2)
+            if reached_2pct_rate is not None
+            else None,
+            "5%以上上昇率(%)": round(surged_rate, 2)
+            if surged_rate is not None
+            else None,
+            "平均最大上昇率(%)": round(
+                float(records["最大上昇率(%)"].mean()),
+                3,
+            )
+            if not records.empty
+            else None,
+            "対象銘柄数": int(records["銘柄コード"].nunique())
+            if not records.empty
+            else 0,
+            "除外銘柄数": len(skipped_tickers),
+        },
+        "銘柄別集計": summarize_tickers(records),
+        "条件別集計": [
+            summarize_condition(records, "スコア60点以上（全体）"),
+            summarize_condition(
+                initial_rebounds,
+                "スコア60点以上 かつ 反発初動",
+            ),
+            summarize_condition(
+                non_initial_rebounds,
+                "スコア60点以上 かつ 反発初動ではない",
+            ),
+        ],
+        "高騰事例上位": top_examples.to_dict(orient="records"),
+    }
+
+
+def main() -> None:
+    """価格取得から集計JSONの保存までを実行する。"""
+    arguments = parse_arguments()
+
+    if arguments.lookahead_days <= 0:
+        raise ValueError(
+            "--lookahead-days は1以上を指定してください。"
+        )
+
+    prices = yf.download(
+        list(TICKERS.keys()),
+        period=arguments.period,
+        group_by="ticker",
+        threads=True,
+        auto_adjust=True,
+        progress=False,
+    )
+
+    records, skipped_tickers = create_records(
+        prices,
+        arguments.lookahead_days,
+    )
+
+    if records.empty:
+        raise RuntimeError(
+            "高スコアの検証対象データを作成できませんでした。"
+        )
+
+    summary = create_summary(
+        records=records,
+        skipped_tickers=skipped_tickers,
+        period=arguments.period,
+        lookahead_days=arguments.lookahead_days,
+    )
+
+    REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with REPORT_PATH.open("w", encoding="utf-8") as file:
+        json.dump(summary, file, ensure_ascii=False, indent=2)
+        file.write("\n")
+
+    overall = summary["全体集計"]
+    print(f"高スコア高騰レポートを保存しました: {REPORT_PATH}")
+    print(
+        "高スコア件数: {count}, 5%以上上昇率: {rate}%".format(
+            count=overall["高スコア件数"],
+            rate=overall["5%以上上昇率(%)"],
+        )
+    )
+    for condition in summary["条件別集計"]:
+        print(
+            "{name}: 件数 {count}, 5%以上上昇率 {rate}%, 平均最大上昇率 {maximum}%".format(
+                name=condition["条件"],
+                count=condition["高スコア件数"],
+                rate=condition["5%以上上昇率(%)"],
+                maximum=condition["平均最大上昇率(%)"],
+            )
+        )
+
+
+if __name__ == "__main__":
+    main()

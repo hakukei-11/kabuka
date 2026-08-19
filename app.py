@@ -22,6 +22,7 @@ matplotlib.rcParams["axes.unicode_minus"] = False
 SCORE_DISPLAY_THRESHOLD = 50
 BACKTEST_REPORT_PATH = Path("reports/backtest_summary.json")
 HISTORICAL_BACKTEST_REPORT_PATH = Path("reports/historical_backtest_summary.json")
+HIGH_SCORE_SURGE_REPORT_PATH = Path("reports/high_score_surge_summary.json")
 RISK_BACKTEST_REPORT_PATH = Path("reports/risk_backtest_summary.json")
 
 st.set_page_config(
@@ -89,6 +90,16 @@ def load_historical_backtest_summary() -> dict | None:
     """historical_backtest.pyが出力した集計JSONを読み込む。"""
     try:
         with HISTORICAL_BACKTEST_REPORT_PATH.open("r", encoding="utf-8") as file:
+            return json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def load_high_score_surge_summary() -> dict | None:
+    """高スコア高騰レポートを読み込む。"""
+    try:
+        with HIGH_SCORE_SURGE_REPORT_PATH.open("r", encoding="utf-8") as file:
             return json.load(file)
     except (FileNotFoundError, json.JSONDecodeError):
         return None
@@ -409,6 +420,55 @@ def show_historical_backtest_tab():
     st.subheader("銘柄別の2%到達率")
     ticker_summary = pd.DataFrame(summary.get("銘柄別集計", []))
     st.dataframe(ticker_summary, use_container_width=True, hide_index=True)
+    st.caption(conditions.get("注意事項", ""))
+
+
+def show_high_score_surge_tab():
+    """高スコア銘柄の高騰実績を表示する。"""
+    st.header("高スコア銘柄の高騰調査")
+    summary = load_high_score_surge_summary()
+    if summary is None:
+        st.info(
+            "高スコア高騰レポートがありません。"
+            "`python high_score_surge_report.py` を実行してください。"
+        )
+        return
+
+    conditions = summary.get("検証条件", {})
+    overall = summary.get("全体集計", {})
+    st.caption(f"作成日時（UTC）: {summary.get('作成日時UTC', '不明')}")
+    st.info(
+        f"条件: スコア{conditions.get('高スコア閾値', 60)}点以上の日から、"
+        f"{conditions.get('確認期間(取引日)', 20)}取引日以内に終値ベースで"
+        f"最大{conditions.get('高騰基準(最大終値上昇率%)', 5)}%以上上昇した事例を集計します。"
+    )
+    metric_columns = st.columns(4)
+    metric_columns[0].metric("高スコア件数", overall.get("高スコア件数", 0))
+    metric_columns[1].metric(
+        "2%到達率",
+        format_percentage(overall.get("2%到達率(%)")),
+    )
+    metric_columns[2].metric(
+        "5%以上上昇率",
+        format_percentage(overall.get("5%以上上昇率(%)")),
+    )
+    metric_columns[3].metric(
+        "平均最大上昇率",
+        format_percentage(overall.get("平均最大上昇率(%)")),
+    )
+
+    st.subheader("銘柄別の高騰実績")
+    st.dataframe(
+        pd.DataFrame(summary.get("銘柄別集計", [])),
+        use_container_width=True,
+        hide_index=True,
+    )
+    st.subheader("高騰事例上位30")
+    st.dataframe(
+        pd.DataFrame(summary.get("高騰事例上位", [])),
+        use_container_width=True,
+        hide_index=True,
+    )
     st.caption(conditions.get("注意事項", ""))
 
 
@@ -795,7 +855,7 @@ else:
     japan_df = pd.DataFrame()
     us_df = pd.DataFrame()
 
-japan_tab, us_tab, backtest_tab, historical_backtest_tab, risk_backtest_tab, candidates_tab, all_tickers_tab = st.tabs(
+japan_tab, us_tab, backtest_tab, historical_backtest_tab, risk_backtest_tab, candidates_tab, all_tickers_tab, high_score_surge_tab = st.tabs(
     [
         f"🇯🇵 日本株（{len(japan_df)}銘柄）",
         f"🇺🇸 米国株（{len(us_df)}銘柄）",
@@ -804,6 +864,7 @@ japan_tab, us_tab, backtest_tab, historical_backtest_tab, risk_backtest_tab, can
         "⚖️ リスク検証",
         "検証済み候補",
         "全銘柄確認",
+        "高スコア高騰調査",
     ]
 )
 
@@ -837,3 +898,6 @@ with historical_backtest_tab:
 
 with risk_backtest_tab:
     show_risk_backtest_tab()
+
+with high_score_surge_tab:
+    show_high_score_surge_tab()
