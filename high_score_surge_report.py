@@ -24,6 +24,17 @@ TARGET_RETURN_PCT = 2.0
 SURGE_RETURN_PCT = 5.0
 
 
+def classify_rsi_band(rsi: float) -> str:
+    """RSIを比較用の4区分に分類する。"""
+    if rsi <= 30:
+        return "RSI30以下"
+    if rsi <= 40:
+        return "RSI31-40"
+    if rsi <= 50:
+        return "RSI41-50"
+    return "RSI51超"
+
+
 def parse_arguments() -> argparse.Namespace:
     """コマンドライン引数を取得する。"""
     parser = argparse.ArgumentParser(
@@ -98,8 +109,24 @@ def create_records(
                 else None
             )
 
+            condition_fields = {
+                "\u0032\u0035MA\u30bf\u30c3\u30c1": bool(
+                    row["\u0032\u0035MA\u30bf\u30c3\u30c1"]
+                ),
+                "\u0032\u0030\u65e5\u5b89\u5024\u30bf\u30c3\u30c1": bool(
+                    row["\u0032\u0030\u65e5\u5b89\u5024\u30bf\u30c3\u30c1"]
+                ),
+                "RSI\u5e2f": classify_rsi_band(float(row["RSI"])),
+                "MACD\u6761\u4ef6": (
+                    "MACD\u30b4\u30fc\u30eb\u30c7\u30f3\u30af\u30ed\u30b9"
+                    if float(row["MACD"]) >= float(row["Signal"])
+                    else "MACD\u30c7\u30c3\u30c9\u30af\u30ed\u30b9"
+                ),
+            }
+
             records.append(
                 {
+                    **condition_fields,
                     "銘柄コード": ticker,
                     "銘柄名": name,
                     "判定日": pd.Timestamp(
@@ -185,6 +212,100 @@ def summarize_tickers(records: pd.DataFrame) -> list[dict]:
     )
 
 
+def summarize_groups(records: pd.DataFrame, column: str) -> list[dict]:
+    """指定した条件列ごとに高騰実績を集計する。"""
+    summaries = []
+    for condition_name, group in records.groupby(column, sort=False):
+        summaries.append(summarize_condition(group, str(condition_name)))
+
+    return sorted(
+        summaries,
+        key=lambda item: (
+            item["\u0035%\u4ee5\u4e0a\u4e0a\u6607\u7387(%)"]
+            if item["\u0035%\u4ee5\u4e0a\u4e0a\u6607\u7387(%)"] is not None
+            else -1,
+            item["\u9ad8\u30b9\u30b3\u30a2\u4ef6\u6570"],
+        ),
+        reverse=True,
+    )
+
+
+def create_combination_summary(
+    records: pd.DataFrame,
+    condition_name: str,
+    condition: pd.Series,
+) -> dict:
+    """複数条件の組み合わせを1行で集計する。"""
+    return summarize_condition(records[condition], condition_name)
+
+
+def create_condition_summaries(records: pd.DataFrame) -> dict:
+    """スコア改善の判断材料となる条件別・組み合わせ別集計を作成する。"""
+    macd_golden = (
+        records["MACD\u6761\u4ef6"]
+        == "MACD\u30b4\u30fc\u30eb\u30c7\u30f3\u30af\u30ed\u30b9"
+    )
+    low20_touch = records["\u0032\u0030\u65e5\u5b89\u5024\u30bf\u30c3\u30c1"]
+    ma25_touch = records["\u0032\u0035MA\u30bf\u30c3\u30c1"]
+    rsi_40_or_lower = records["RSI"] <= 40
+
+    combinations = [
+        create_combination_summary(
+            records,
+            "20\u65e5\u5b89\u5024\u30bf\u30c3\u30c1 \u304b\u3064 MACD\u30b4\u30fc\u30eb\u30c7\u30f3\u30af\u30ed\u30b9",
+            low20_touch & macd_golden,
+        ),
+        create_combination_summary(
+            records,
+            "20\u65e5\u5b89\u5024\u30bf\u30c3\u30c1 \u304b\u3064 MACD\u30c7\u30c3\u30c9\u30af\u30ed\u30b9",
+            low20_touch & ~macd_golden,
+        ),
+        create_combination_summary(
+            records,
+            "25MA\u30bf\u30c3\u30c1 \u304b\u3064 MACD\u30b4\u30fc\u30eb\u30c7\u30f3\u30af\u30ed\u30b9",
+            ma25_touch & macd_golden,
+        ),
+        create_combination_summary(
+            records,
+            "25MA\u30bf\u30c3\u30c1 \u304b\u3064 MACD\u30c7\u30c3\u30c9\u30af\u30ed\u30b9",
+            ma25_touch & ~macd_golden,
+        ),
+        create_combination_summary(
+            records,
+            "RSI40\u4ee5\u4e0b \u304b\u3064 MACD\u30b4\u30fc\u30eb\u30c7\u30f3\u30af\u30ed\u30b9",
+            rsi_40_or_lower & macd_golden,
+        ),
+        create_combination_summary(
+            records,
+            "RSI40\u4ee5\u4e0b \u304b\u3064 MACD\u30c7\u30c3\u30c9\u30af\u30ed\u30b9",
+            rsi_40_or_lower & ~macd_golden,
+        ),
+    ]
+
+    return {
+        "25MA\u6761\u4ef6": summarize_groups(
+            records,
+            "\u0032\u0035MA\u30bf\u30c3\u30c1",
+        ),
+        "20\u65e5\u5b89\u5024\u6761\u4ef6": summarize_groups(
+            records,
+            "\u0032\u0030\u65e5\u5b89\u5024\u30bf\u30c3\u30c1",
+        ),
+        "RSI\u6761\u4ef6": summarize_groups(records, "RSI\u5e2f"),
+        "MACD\u6761\u4ef6": summarize_groups(records, "MACD\u6761\u4ef6"),
+        "\u7d44\u307f\u5408\u308f\u305b\u6761\u4ef6": sorted(
+            combinations,
+            key=lambda item: (
+                item["\u0035%\u4ee5\u4e0a\u4e0a\u6607\u7387(%)"]
+                if item["\u0035%\u4ee5\u4e0a\u4e0a\u6607\u7387(%)"] is not None
+                else -1,
+                item["\u9ad8\u30b9\u30b3\u30a2\u4ef6\u6570"],
+            ),
+            reverse=True,
+        ),
+    }
+
+
 def create_summary(
     records: pd.DataFrame,
     skipped_tickers: list[str],
@@ -210,6 +331,9 @@ def create_summary(
     non_initial_rebounds = records[~records["反発初動"]]
 
     return {
+        "score_improvement_condition_summary": create_condition_summaries(
+            records
+        ),
         "作成日時UTC": datetime.now(timezone.utc).strftime(
             "%Y-%m-%dT%H:%M:%SZ"
         ),
@@ -316,6 +440,23 @@ def main() -> None:
                 maximum=condition["平均最大上昇率(%)"],
             )
         )
+
+
+    print("\nスコア改善用の条件別実績（5%以上上昇率順）")
+    for category, conditions in summary[
+        "score_improvement_condition_summary"
+    ].items():
+        print(f"[{category}]")
+        for condition in conditions:
+            print(
+                "{name}: 件数 {count}, 5%以上上昇率 {rate}%, "
+                "平均最大上昇率 {maximum}%".format(
+                    name=condition["\u6761\u4ef6"],
+                    count=condition["\u9ad8\u30b9\u30b3\u30a2\u4ef6\u6570"],
+                    rate=condition["\u0035%\u4ee5\u4e0a\u4e0a\u6607\u7387(%)"],
+                    maximum=condition["\u5e73\u5747\u6700\u5927\u4e0a\u6607\u7387(%)"],
+                )
+            )
 
 
 if __name__ == "__main__":
