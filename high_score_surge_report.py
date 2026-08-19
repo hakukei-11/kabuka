@@ -306,6 +306,53 @@ def create_condition_summaries(records: pd.DataFrame) -> dict:
     }
 
 
+def create_time_split_condition_summaries(records: pd.DataFrame) -> dict:
+    """条件別の高騰実績を時系列で前半70%・後半30%に分けて検証する。"""
+    analyzed_dates = pd.to_datetime(records["\u5224\u5b9a\u65e5"])
+    split_index = max(0, int(len(records) * 0.7) - 1)
+    split_date = analyzed_dates.sort_values().iloc[split_index]
+    early_period = analyzed_dates <= split_date
+    later_period = analyzed_dates > split_date
+    macd_golden = (
+        records["MACD\u6761\u4ef6"]
+        == "MACD\u30b4\u30fc\u30eb\u30c7\u30f3\u30af\u30ed\u30b9"
+    )
+    low20_touch = records["\u0032\u0030\u65e5\u5b89\u5024\u30bf\u30c3\u30c1"]
+    rsi_41_to_50 = records["RSI\u5e2f"] == "RSI41-50"
+    rsi_40_or_lower = records["RSI"] <= 40
+
+    conditions = [
+        ("\u30b9\u30b3\u30a260\u70b9\u4ee5\u4e0a\uff08\u5168\u4f53\uff09", pd.Series(True, index=records.index)),
+        (
+            "20\u65e5\u5b89\u5024\u30bf\u30c3\u30c1 \u304b\u3064 MACD\u30b4\u30fc\u30eb\u30c7\u30f3\u30af\u30ed\u30b9",
+            low20_touch & macd_golden,
+        ),
+        ("RSI41-50", rsi_41_to_50),
+        ("MACD\u30b4\u30fc\u30eb\u30c7\u30f3\u30af\u30ed\u30b9", macd_golden),
+        (
+            "RSI40\u4ee5\u4e0b \u304b\u3064 MACD\u30c7\u30c3\u30c9\u30af\u30ed\u30b9",
+            rsi_40_or_lower & ~macd_golden,
+        ),
+    ]
+    summaries = []
+    for condition_name, condition in conditions:
+        for period_name, period_filter in [
+            ("\u524d\u534a70%", early_period),
+            ("\u5f8c\u534a30%", later_period),
+        ]:
+            summary = summarize_condition(
+                records[condition & period_filter],
+                condition_name,
+            )
+            summary["\u691c\u8a3c\u671f\u9593"] = period_name
+            summaries.append(summary)
+
+    return {
+        "\u5206\u5272\u65e5": split_date.strftime("%Y-%m-%d"),
+        "\u96c6\u8a08": summaries,
+    }
+
+
 def create_summary(
     records: pd.DataFrame,
     skipped_tickers: list[str],
@@ -333,6 +380,9 @@ def create_summary(
     return {
         "score_improvement_condition_summary": create_condition_summaries(
             records
+        ),
+        "score_improvement_time_split_summary": (
+            create_time_split_condition_summaries(records)
         ),
         "作成日時UTC": datetime.now(timezone.utc).strftime(
             "%Y-%m-%dT%H:%M:%SZ"
@@ -457,6 +507,24 @@ def main() -> None:
                     maximum=condition["\u5e73\u5747\u6700\u5927\u4e0a\u6607\u7387(%)"],
                 )
             )
+
+    time_split_summary = summary["score_improvement_time_split_summary"]
+    print(
+        "\n時系列分割による条件別再現性（分割日: {date}）".format(
+            date=time_split_summary["\u5206\u5272\u65e5"]
+        )
+    )
+    for condition in time_split_summary["\u96c6\u8a08"]:
+        print(
+            "{name} / {period}: 件数 {count}, 5%以上上昇率 {rate}%, "
+            "平均最大上昇率 {maximum}%".format(
+                name=condition["\u6761\u4ef6"],
+                period=condition["\u691c\u8a3c\u671f\u9593"],
+                count=condition["\u9ad8\u30b9\u30b3\u30a2\u4ef6\u6570"],
+                rate=condition["\u0035%\u4ee5\u4e0a\u4e0a\u6607\u7387(%)"],
+                maximum=condition["\u5e73\u5747\u6700\u5927\u4e0a\u6607\u7387(%)"],
+            )
+        )
 
 
 if __name__ == "__main__":
