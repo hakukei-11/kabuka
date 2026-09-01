@@ -3,7 +3,8 @@ name: Daily Export
 
 on:
   schedule:
-    - cron: "0 1 * * *"   # 日本時間 AM10:00（UTC 01:00）
+    # 日本時間16:00（UTC 07:00）。日本株の終値確定後に実行する。
+    - cron: "0 7 * * 1-5"
   workflow_dispatch:
 
 permissions:
@@ -41,13 +42,13 @@ jobs:
 
       - name: Debug file existence
         run: |
-          ls -R data || echo "dataフォルダなし"
+          ls -R data || echo "data folder does not exist"
 
       - name: Commit CSV and analysis reports
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add data -f  # ← dataフォルダを強制的にステージング
+          git add data -f
           git add update_status.json
           git add reports/backtest_summary.json
           git status
