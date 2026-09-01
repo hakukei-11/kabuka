@@ -1,7 +1,5 @@
 # scoring.py
 
-LOW20_MACD_GOLDEN_CROSS_BONUS = 10
-
 def calc_rebound_score(
     is_25ma_touch: bool,
     is_box_bottom_touch: bool,
@@ -56,9 +54,5 @@ def calc_rebound_score(
             score += 20
     elif abs(signal - macd) < 0.1:
         score += 5
-
-    # 過去5年の前半・後半の両方で、組み合わせ条件の有効性を確認済み。
-    if is_box_bottom_touch and macd > signal:
-        score += LOW20_MACD_GOLDEN_CROSS_BONUS
 
     return score
