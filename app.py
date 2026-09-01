@@ -667,39 +667,100 @@ def show_risk_backtest_tab():
 
 
 def show_validated_candidates_tab(results_df: pd.DataFrame):
-    """過去検証で再現性を確認した20日安値タッチ銘柄を表示する。"""
-    st.header("検証済み分析候補（20日安値タッチ）")
+    """過去検証で再現性を確認した優先・注意候補を表示する。"""
+    st.header("検証済み分析候補")
     st.caption(
-        "過去2年・20取引日の検証で、-5%損失ラインと往復コスト0.1%を仮定した場合に、"
-        "後半30%でも平均リターンがプラスだった条件です。"
+        "過去5年・20取引日の利確+2%／損失ライン検証で、"
+        "時系列分割後も傾向を確認できた条件を表示します。"
     )
     st.warning(
         "これは過去データに基づく分析候補であり、売買の推奨や将来の利益を保証するものではありません。"
     )
 
-    candidates = results_df[results_df["20日安値タッチ"]].copy()
-    if candidates.empty:
+    priority_candidates = results_df[
+        (results_df["20日安値タッチ"])
+        & (results_df["前日比"] > 0)
+        & (results_df["RSI"] <= 25)
+        & (results_df["MACD"] <= results_df["Signal"])
+    ].copy()
+    caution_candidates = results_df[
+        (results_df["25MAタッチ"])
+        & (~results_df["20日安値タッチ"])
+        & (results_df["前日比"] > 0)
+        & (results_df["RSI"] > 30)
+        & (results_df["RSI"] <= 40)
+        & (results_df["MACD"] > results_df["Signal"])
+        & ((results_df["MACD"] - results_df["Signal"]).abs() >= 0.1)
+    ].copy()
+    low20_candidates = results_df[results_df["20日安値タッチ"]].copy()
+
+    metric_columns = st.columns(3)
+    metric_columns[0].metric("優先候補", len(priority_candidates))
+    metric_columns[1].metric("注意候補", len(caution_candidates))
+    metric_columns[2].metric("20日安値タッチ全件", len(low20_candidates))
+
+    display_columns = [
+        "銘柄コード",
+        "銘柄名",
+        "取引日",
+        "終値",
+        "前日比",
+        "RSI",
+        "MACD",
+        "Signal",
+        "25MAタッチ",
+        "20日安値タッチ",
+        "反発確度スコア",
+        "判定",
+    ]
+
+    st.subheader("優先候補：20日安値タッチ・終値上昇・RSI25以下")
+    st.caption(
+        "過去検証ではスコア65点構成が中心で、-3%損失ラインで約69%、"
+        "-5%損失ラインで約79%の保守的成功率でした。"
+    )
+    if priority_candidates.empty:
+        st.info("本日の分析結果に優先候補はありません。")
+    else:
+        st.dataframe(
+            priority_candidates.sort_values(["RSI", "反発確度スコア"])
+            .reindex(columns=display_columns),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+    st.subheader("注意候補：25MAタッチ・RSI31-40・MACD上向き")
+    st.caption(
+        "この70点構成は後半30%で-3%損失ラインの保守的成功率が約47%まで低下しました。"
+        "点数だけで優先せず、個別に確認してください。"
+    )
+    if caution_candidates.empty:
+        st.info("本日の分析結果に注意候補はありません。")
+    else:
+        st.dataframe(
+            caution_candidates.sort_values("RSI").reindex(columns=display_columns),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+    st.subheader("参考：20日安値タッチの全候補")
+    if low20_candidates.empty:
         st.info("本日の分析結果には、20日安値タッチの銘柄はありません。")
         return
 
-    candidates["20日安値からの乖離(%)"] = (
-        (candidates["終値"] - candidates["20日安値"])
-        / candidates["20日安値"]
+    low20_candidates["20日安値からの乖離(%)"] = (
+        (low20_candidates["終値"] - low20_candidates["20日安値"])
+        / low20_candidates["20日安値"]
         * 100
     ).round(2)
-    candidates["優先順位"] = candidates["反発初動"].map(
+    low20_candidates["優先順位"] = low20_candidates["反発初動"].map(
         {True: "反発初動（優先確認）", False: "20日安値タッチ"}
     )
-    candidates = candidates.sort_values(
+    low20_candidates = low20_candidates.sort_values(
         ["反発初動", "反発確度スコア", "RSI"],
         ascending=[False, False, True],
     )
-    metric_columns = st.columns(2)
-    metric_columns[0].metric("本日の該当銘柄数", len(candidates))
-    metric_columns[1].metric("参考コスト仮定", "往復 0.1%")
-    initial_rebound_count = int(candidates["反発初動"].sum())
-    st.metric("このうち反発初動候補", initial_rebound_count)
-    display_columns = [
+    low20_display_columns = [
         "銘柄コード",
         "銘柄名",
         "優先順位",
@@ -717,20 +778,10 @@ def show_validated_candidates_tab(results_df: pd.DataFrame):
         "判定",
     ]
     st.dataframe(
-        candidates.reindex(columns=display_columns),
+        low20_candidates.reindex(columns=low20_display_columns),
         use_container_width=True,
         hide_index=True,
     )
-    if initial_rebound_count > 0:
-        st.subheader("反発初動候補")
-        st.caption(
-            "20日安値タッチ・陽線・終値が当日値幅の上位70%以上の銘柄です。"
-        )
-        st.dataframe(
-            candidates[candidates["反発初動"]].reindex(columns=display_columns),
-            use_container_width=True,
-            hide_index=True,
-        )
 
 
 def show_all_tickers_tab(
