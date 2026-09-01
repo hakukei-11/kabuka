@@ -24,6 +24,7 @@ BACKTEST_REPORT_PATH = Path("reports/backtest_summary.json")
 HISTORICAL_BACKTEST_REPORT_PATH = Path("reports/historical_backtest_summary.json")
 HIGH_SCORE_SURGE_REPORT_PATH = Path("reports/high_score_surge_summary.json")
 RISK_BACKTEST_REPORT_PATH = Path("reports/risk_backtest_summary.json")
+SCORE_RISK_REPORT_PATH = Path("reports/score_risk_summary.json")
 
 st.set_page_config(
     page_title="寄り付き天底狙いスクリーナー",
@@ -110,6 +111,16 @@ def load_risk_backtest_summary() -> dict | None:
     """risk_backtest.pyが出力した集計JSONを読み込む。"""
     try:
         with RISK_BACKTEST_REPORT_PATH.open("r", encoding="utf-8") as file:
+            return json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def load_score_risk_summary() -> dict | None:
+    """score_risk_report.pyが出力したスコア別リスク検証JSONを読み込む。"""
+    try:
+        with SCORE_RISK_REPORT_PATH.open("r", encoding="utf-8") as file:
             return json.load(file)
     except (FileNotFoundError, json.JSONDecodeError):
         return None
@@ -469,6 +480,66 @@ def show_high_score_surge_tab():
         use_container_width=True,
         hide_index=True,
     )
+    st.caption(conditions.get("注意事項", ""))
+
+
+def show_score_risk_tab():
+    """スコア別の利確・損失ライン先後確率を表示する。"""
+    st.header("🎯 スコア別の利確・損失確率")
+    summary = load_score_risk_summary()
+    if summary is None:
+        st.info(
+            "スコア別リスク検証レポートがありません。"
+            "`python score_risk_report.py --period 5y` を実行してください。"
+        )
+        return
+
+    conditions = summary.get("\u691c\u8a3c\u6761\u4ef6", {})
+    st.caption(f"作成日時（UTC）: {summary.get('作成日時UTC', '不明')}")
+    st.info(
+        f"条件: 終値を基準に、{conditions.get('確認期間(営業日)', 20)}営業日以内で"
+        f"+{conditions.get('利確目標(%)', 2)}%へ到達する前に、"
+        "損失ラインへ到達したかを検証します。"
+    )
+
+    metric_columns = st.columns(2)
+    metric_columns[0].metric("全検証件数", summary.get("全検証件数", 0))
+    metric_columns[1].metric("除外銘柄数", summary.get("除外銘柄数", 0))
+
+    st.subheader("スコア帯別の利確・損失確率")
+    st.caption(
+        "保守的成功率は、同日に利確価格と損失価格の両方へ到達したケースを"
+        "失敗として扱います。"
+    )
+    for stop_line, rows in summary.get("点数帯別集計", {}).items():
+        st.markdown(f"#### 利確 +2% / 損失ライン {stop_line}")
+        st.dataframe(
+            pd.DataFrame(rows),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+    st.subheader("点数ごとの詳細")
+    for stop_line, rows in summary.get("点数別集計", {}).items():
+        with st.expander(f"利確 +2% / 損失ライン {stop_line}"):
+            st.dataframe(
+                pd.DataFrame(rows),
+                use_container_width=True,
+                hide_index=True,
+            )
+
+    st.subheader("時系列分割による再現性")
+    for stop_line, time_split in summary.get("時系列分割集計", {}).items():
+        st.markdown(
+            f"#### 利確 +2% / 損失ライン {stop_line}"
+            f"（分割日: {time_split.get('分割日', '不明')}）"
+        )
+        st.dataframe(
+            pd.DataFrame(time_split.get("集計", [])),
+            use_container_width=True,
+            hide_index=True,
+        )
+
     st.caption(conditions.get("注意事項", ""))
 
 
@@ -898,6 +969,8 @@ with historical_backtest_tab:
 
 with risk_backtest_tab:
     show_risk_backtest_tab()
+    st.divider()
+    show_score_risk_tab()
 
 with high_score_surge_tab:
     show_high_score_surge_tab()
