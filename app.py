@@ -27,6 +27,7 @@ HIGH_SCORE_SURGE_REPORT_PATH = Path("reports/high_score_surge_summary.json")
 RISK_BACKTEST_REPORT_PATH = Path("reports/risk_backtest_summary.json")
 SCORE_RISK_REPORT_PATH = Path("reports/score_risk_summary.json")
 SECTOR_RISK_REPORT_PATH = Path("reports/sector_risk_summary.json")
+CANDIDATE_TRACKING_REPORT_PATH = Path("reports/candidate_tracking.json")
 
 st.set_page_config(
     page_title="寄り付き天底狙いスクリーナー",
@@ -133,6 +134,16 @@ def load_sector_risk_summary() -> dict | None:
     """sector_risk_report.pyが出力した業種別検証JSONを読み込む。"""
     try:
         with SECTOR_RISK_REPORT_PATH.open("r", encoding="utf-8") as file:
+            return json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def load_candidate_tracking_summary() -> dict | None:
+    """candidate_tracker.pyが出力した実運用追跡JSONを読み込む。"""
+    try:
+        with CANDIDATE_TRACKING_REPORT_PATH.open("r", encoding="utf-8") as file:
             return json.load(file)
     except (FileNotFoundError, json.JSONDecodeError):
         return None
@@ -743,6 +754,81 @@ def show_risk_backtest_tab():
     st.caption("同一日に利確価格と損失価格の両方へ到達した順序は、日足だけでは判定できません。")
 
 
+def show_candidate_tracking_tab():
+    """日々の候補を将来20営業日の終値で追跡した結果を表示する。"""
+    st.header("📌 実運用追跡")
+    summary = load_candidate_tracking_summary()
+    if summary is None:
+        st.info(
+            "実運用追跡レポートがありません。"
+            "`python candidate_tracker.py` を実行してください。"
+        )
+        return
+
+    conditions = summary.get("検証条件", {})
+    overall = summary.get("全体", {})
+    st.caption(f"作成日時（UTC）: {summary.get('作成日時UTC', '不明')}")
+    st.info(
+        f"スコア{conditions.get('候補スコア下限', 50)}点以上を日次CSVごとに保存し、"
+        f"以後{conditions.get('確認期間(営業日)', 20)}営業日の終値で"
+        f"利確+{conditions.get('利確目標(%)', 2)}%と損失ラインの先後を追跡します。"
+    )
+    st.caption(conditions.get("注意事項", ""))
+
+    metric_columns = st.columns(3)
+    metric_columns[0].metric("保存候補件数", overall.get("候補件数", 0))
+    metric_columns[1].metric("追跡中", overall.get("追跡中件数", 0))
+    metric_columns[2].metric("検証完了", overall.get("検証完了件数", 0))
+
+    st.subheader("利確・損失ラインの追跡結果")
+    st.dataframe(
+        pd.DataFrame(summary.get("利確・損失ライン集計", [])),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    st.subheader("候補分類別の結果")
+    st.dataframe(
+        pd.DataFrame(summary.get("候補分類別集計", [])),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    st.subheader("保存済み候補一覧")
+    records = pd.DataFrame(summary.get("候補一覧", []))
+    if records.empty:
+        st.info("保存済み候補はありません。")
+        return
+
+    status_options = ["すべて"] + sorted(records["追跡状況"].dropna().unique().tolist())
+    selected_status = st.selectbox("追跡状況で絞り込み", status_options, key="tracking_status")
+    if selected_status != "すべて":
+        records = records[records["追跡状況"] == selected_status]
+
+    display_columns = [
+        "取引日",
+        "銘柄コード",
+        "銘柄名",
+        "業種",
+        "候補分類",
+        "終値",
+        "反発確度スコア",
+        "追跡状況",
+        "追跡済み営業日",
+        "+2%対-3%結果",
+        "+2%対-5%結果",
+        "最大終値リターン(%)",
+        "最新終値リターン(%)",
+        "判定",
+    ]
+    st.dataframe(
+        records.sort_values(["取引日", "反発確度スコア"], ascending=[False, False])
+        .reindex(columns=display_columns),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+
 def show_validated_candidates_tab(results_df: pd.DataFrame):
     """過去検証で再現性を確認した優先・注意候補を表示する。"""
     st.header("検証済み分析候補")
@@ -1081,7 +1167,7 @@ else:
     japan_df = pd.DataFrame()
     us_df = pd.DataFrame()
 
-japan_tab, us_tab, backtest_tab, historical_backtest_tab, risk_backtest_tab, sector_risk_tab, candidates_tab, all_tickers_tab, high_score_surge_tab = st.tabs(
+japan_tab, us_tab, backtest_tab, historical_backtest_tab, risk_backtest_tab, sector_risk_tab, candidates_tab, tracking_tab, all_tickers_tab, high_score_surge_tab = st.tabs(
     [
         f"🇯🇵 日本株（{len(japan_df)}銘柄）",
         f"🇺🇸 米国株（{len(us_df)}銘柄）",
@@ -1090,6 +1176,7 @@ japan_tab, us_tab, backtest_tab, historical_backtest_tab, risk_backtest_tab, sec
         "⚖️ リスク検証",
         "🏭 業種別検証",
         "検証済み候補",
+        "📌 実運用追跡",
         "全銘柄確認",
         "高スコア高騰調査",
     ]
@@ -1113,6 +1200,9 @@ with us_tab:
 
 with candidates_tab:
     show_validated_candidates_tab(all_results_df)
+
+with tracking_tab:
+    show_candidate_tracking_tab()
 
 with all_tickers_tab:
     show_all_tickers_tab(all_results_df, missing_tickers)

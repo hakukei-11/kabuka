@@ -36,6 +36,10 @@ jobs:
         run: |
           python export_data.py
 
+      - name: Track daily candidates
+        run: |
+          python candidate_tracker.py
+
       - name: Run backtest.py
         run: |
           python backtest.py
@@ -51,6 +55,7 @@ jobs:
           git add data -f
           git add update_status.json
           git add reports/backtest_summary.json
+          git add reports/candidate_tracking.json
           git status
-          git commit -m "Daily export CSV and backtest report" || echo "No changes"
+          git commit -m "Daily export CSV and tracking report" || echo "No changes"
           git push
