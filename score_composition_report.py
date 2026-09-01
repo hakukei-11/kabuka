@@ -12,6 +12,7 @@ import yfinance as yf
 
 from analysis_engine import prepare_dataframe
 from risk_backtest import get_first_event
+from scoring import calc_rebound_score
 from tickers import TICKERS
 
 
@@ -21,7 +22,7 @@ DEFAULT_PERIOD = "5y"
 LOOKAHEAD_DAYS = 20
 TARGET_RETURN_PCT = 2.0
 STOP_LOSS_PCTS = (3.0, 5.0)
-FOCUS_SCORES = (45, 60, 65, 70)
+FOCUS_SCORES = (50, 60, 65, 70)
 MINIMUM_SAMPLE_SIZE = 30
 
 
@@ -92,6 +93,26 @@ def calculate_component_points(
     else:
         macd_points, macd_condition = 0, "MACDがSignal以下"
 
+    adjustment_points = 0
+    adjustment_reason = "補正なし"
+    if (
+        is_low20_touch
+        and close_today <= close_yesterday
+        and rsi <= 25
+        and macd <= signal
+        and macd_difference >= 0.1
+    ):
+        adjustment_points = 5
+        adjustment_reason = "低RSI・20日安値の検証済み補正"
+    elif (
+        is_25ma_touch
+        and 30 < rsi <= 40
+        and macd > signal
+        and macd_difference >= 0.1
+    ):
+        adjustment_points = -10
+        adjustment_reason = "25MA・RSI31-40の注意補正"
+
     return {
         "25MA条件": ma_condition,
         "25MA寄与点": ma_points,
@@ -101,6 +122,8 @@ def calculate_component_points(
         "RSI寄与点": rsi_points,
         "MACD条件": macd_condition,
         "MACD寄与点": macd_points,
+        "検証補正": adjustment_points,
+        "補正理由": adjustment_reason,
     }
 
 
@@ -143,14 +166,14 @@ def create_records(
                 close_today,
                 close_yesterday,
             )
-            score = sum(
-                int(components[column])
-                for column in [
-                    "25MA寄与点",
-                    "20日安値寄与点",
-                    "RSI寄与点",
-                    "MACD寄与点",
-                ]
+            score = calc_rebound_score(
+                is_25ma_touch=bool(row["25MAタッチ"]),
+                is_box_bottom_touch=bool(row["20日安値タッチ"]),
+                rsi=float(row["RSI"]),
+                macd=float(row["MACD"]),
+                signal=float(row["Signal"]),
+                close_today=close_today,
+                close_yesterday=close_yesterday,
             )
             composition = " / ".join(
                 [
@@ -158,6 +181,7 @@ def create_records(
                     f"20日安値:{components['20日安値寄与点']}",
                     f"RSI:{components['RSI寄与点']}",
                     f"MACD:{components['MACD寄与点']}",
+                    f"補正:{components['検証補正']}",
                 ]
             )
             future = data.iloc[index + 1:index + 1 + lookahead_days]

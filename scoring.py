@@ -1,5 +1,8 @@
 # scoring.py
 
+"""反発確度スコアの共通計算処理。"""
+
+
 def calc_rebound_score(
     is_25ma_touch: bool,
     is_box_bottom_touch: bool,
@@ -9,22 +12,21 @@ def calc_rebound_score(
     close_today: float,
     close_yesterday: float,
 ) -> int:
-    """
-    反発候補の総合スコアを計算する。
+    """過去検証で確認した補正を含む反発確度スコアを計算する。
 
-    スコアの仕様:
-    - 25MA付近かつ終値上昇: 40点
-    - 25MA付近かつ終値下落: 20点
-    - 25MA付近かつ横ばい: 30点
-    - 20日安値付近かつ終値上昇: 40点
-    - 20日安値付近かつ終値下落・横ばい: 20点
-    - RSI 25以下: 25点
-    - RSI 30以下: 20点
-    - RSI 40以下: 10点
-    - MACDがシグナルを上回る: 20〜30点
-    - MACDがシグナルを下回る直後: 5点
+    基本配点:
+    - 25MA付近かつ終値上昇・下落・横ばい: 40・20・30点
+    - 20日安値付近かつ終値上昇・下落等: 40・20点
+    - RSI 25以下・30以下・40以下: 25・20・10点
+    - MACDがSignalを上回る: 20点（差0.1未満は30点）
+    - MACDがSignalを下回り差0.1未満: 5点
+
+    過去5年・20営業日・利確+2%の検証に基づく補正:
+    - 20日安値タッチ、終値下落等、RSI25以下、MACD下向き: +5点
+    - 25MAタッチ、RSI31-40、MACD上向き（差0.1以上）: -10点
     """
     score = 0
+    macd_difference = abs(macd - signal)
 
     if is_25ma_touch:
         if close_today > close_yesterday:
@@ -48,11 +50,28 @@ def calc_rebound_score(
         score += 10
 
     if macd > signal:
-        if abs(macd - signal) < 0.1:
+        if macd_difference < 0.1:
             score += 30
         else:
             score += 20
-    elif abs(signal - macd) < 0.1:
+    elif macd_difference < 0.1:
         score += 5
+
+    if (
+        is_box_bottom_touch
+        and close_today <= close_yesterday
+        and rsi <= 25
+        and macd <= signal
+        and macd_difference >= 0.1
+    ):
+        score += 5
+
+    if (
+        is_25ma_touch
+        and 30 < rsi <= 40
+        and macd > signal
+        and macd_difference >= 0.1
+    ):
+        score -= 10
 
     return score

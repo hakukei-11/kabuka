@@ -683,6 +683,13 @@ def show_validated_candidates_tab(results_df: pd.DataFrame):
         & (results_df["RSI"] <= 25)
         & (results_df["MACD"] <= results_df["Signal"])
     ].copy()
+    priority_contrarian_candidates = results_df[
+        (results_df["20日安値タッチ"])
+        & (results_df["前日比"] <= 0)
+        & (results_df["RSI"] <= 25)
+        & (results_df["MACD"] <= results_df["Signal"])
+        & ((results_df["MACD"] - results_df["Signal"]).abs() >= 0.1)
+    ].copy()
     caution_candidates = results_df[
         (results_df["25MAタッチ"])
         & (~results_df["20日安値タッチ"])
@@ -694,10 +701,11 @@ def show_validated_candidates_tab(results_df: pd.DataFrame):
     ].copy()
     low20_candidates = results_df[results_df["20日安値タッチ"]].copy()
 
-    metric_columns = st.columns(3)
+    metric_columns = st.columns(4)
     metric_columns[0].metric("優先候補", len(priority_candidates))
-    metric_columns[1].metric("注意候補", len(caution_candidates))
-    metric_columns[2].metric("20日安値タッチ全件", len(low20_candidates))
+    metric_columns[1].metric("逆張り優先候補", len(priority_contrarian_candidates))
+    metric_columns[2].metric("注意候補", len(caution_candidates))
+    metric_columns[3].metric("20日安値タッチ全件", len(low20_candidates))
 
     display_columns = [
         "銘柄コード",
@@ -729,10 +737,25 @@ def show_validated_candidates_tab(results_df: pd.DataFrame):
             hide_index=True,
         )
 
+    st.subheader("逆張り優先候補：20日安値タッチ・終値下落等・RSI25以下")
+    st.caption(
+        "検証後の補正で45点から50点へ上がる条件です。過去5年では、"
+        "-3%損失ラインの保守的成功率が約66%、-5%損失ラインでは約77%でした。"
+    )
+    if priority_contrarian_candidates.empty:
+        st.info("本日の分析結果に逆張り優先候補はありません。")
+    else:
+        st.dataframe(
+            priority_contrarian_candidates.sort_values("RSI")
+            .reindex(columns=display_columns),
+            use_container_width=True,
+            hide_index=True,
+        )
+
     st.subheader("注意候補：25MAタッチ・RSI31-40・MACD上向き")
     st.caption(
-        "この70点構成は後半30%で-3%損失ラインの保守的成功率が約47%まで低下しました。"
-        "点数だけで優先せず、個別に確認してください。"
+        "旧70点構成は後半30%で-3%損失ラインの保守的成功率が約47%まで低下しました。"
+        "検証後の補正で60点へ下げ、点数だけで優先しないようにしています。"
     )
     if caution_candidates.empty:
         st.info("本日の分析結果に注意候補はありません。")
