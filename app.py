@@ -12,6 +12,7 @@ import yfinance as yf
 
 from analysis_engine import analyze_dataframe, get_analysis_executed_at
 from chart import plot_chart
+from sectors import get_sector
 from tickers import TICKERS
 
 font_path = "./fonts/ipaexg.ttf"
@@ -25,6 +26,7 @@ HISTORICAL_BACKTEST_REPORT_PATH = Path("reports/historical_backtest_summary.json
 HIGH_SCORE_SURGE_REPORT_PATH = Path("reports/high_score_surge_summary.json")
 RISK_BACKTEST_REPORT_PATH = Path("reports/risk_backtest_summary.json")
 SCORE_RISK_REPORT_PATH = Path("reports/score_risk_summary.json")
+SECTOR_RISK_REPORT_PATH = Path("reports/sector_risk_summary.json")
 
 st.set_page_config(
     page_title="寄り付き天底狙いスクリーナー",
@@ -121,6 +123,16 @@ def load_score_risk_summary() -> dict | None:
     """score_risk_report.pyが出力したスコア別リスク検証JSONを読み込む。"""
     try:
         with SCORE_RISK_REPORT_PATH.open("r", encoding="utf-8") as file:
+            return json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def load_sector_risk_summary() -> dict | None:
+    """sector_risk_report.pyが出力した業種別検証JSONを読み込む。"""
+    try:
+        with SECTOR_RISK_REPORT_PATH.open("r", encoding="utf-8") as file:
             return json.load(file)
     except (FileNotFoundError, json.JSONDecodeError):
         return None
@@ -339,6 +351,7 @@ def show_backtest_tab():
     display_columns = [
         "銘柄コード",
         "銘柄名",
+        "業種",
         "取引日",
         "終値",
         "目標売値",
@@ -539,6 +552,70 @@ def show_score_risk_tab():
             use_container_width=True,
             hide_index=True,
         )
+
+    st.caption(conditions.get("注意事項", ""))
+
+
+def show_sector_risk_tab():
+    """業種別の利確・損失ライン到達順の検証結果を表示する。"""
+    st.header("🏭 業種別の有効性検証")
+    summary = load_sector_risk_summary()
+    if summary is None:
+        st.info(
+            "業種別検証レポートがありません。"
+            "`python sector_risk_report.py --period 5y` を実行してください。"
+        )
+        return
+
+    conditions = summary.get("検証条件", {})
+    st.caption(f"作成日時（UTC）: {summary.get('作成日時UTC', '不明')}")
+    st.info(
+        f"条件: {conditions.get('確認期間(営業日)', 20)}営業日以内の利確+"
+        f"{conditions.get('利確目標(%)', 2)}%と損失ラインの到達順を、"
+        "固定した業種分類で比較します。"
+    )
+    st.caption(
+        "業種・点数帯は最小検証件数以上、検証済み条件は別の最小件数以上の結果だけを表示します。"
+    )
+
+    metric_columns = st.columns(2)
+    metric_columns[0].metric("全検証件数", summary.get("全検証件数", 0))
+    metric_columns[1].metric("除外銘柄数", len(summary.get("除外銘柄", [])))
+
+    st.subheader("業種別の利確・損失確率")
+    for stop_line, rows in summary.get("業種別集計", {}).items():
+        st.markdown(f"#### 利確 +2% / 損失ライン {stop_line}")
+        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+    st.subheader("業種・点数帯別の確率")
+    for stop_line, rows in summary.get("業種・点数帯別集計", {}).items():
+        with st.expander(f"利確 +2% / 損失ライン {stop_line}"):
+            st.dataframe(
+                pd.DataFrame(rows),
+                use_container_width=True,
+                hide_index=True,
+            )
+
+    st.subheader("業種・検証済み条件別の確率")
+    for stop_line, rows in summary.get("業種・検証済み条件別集計", {}).items():
+        with st.expander(f"利確 +2% / 損失ライン {stop_line}"):
+            st.dataframe(
+                pd.DataFrame(rows),
+                use_container_width=True,
+                hide_index=True,
+            )
+
+    st.subheader("業種・点数帯別の時系列再現性")
+    for stop_line, time_split in summary.get("業種別時系列分割集計", {}).items():
+        with st.expander(
+            f"利確 +2% / 損失ライン {stop_line}"
+            f"（分割日: {time_split.get('分割日', '不明')}）"
+        ):
+            st.dataframe(
+                pd.DataFrame(time_split.get("集計", [])),
+                use_container_width=True,
+                hide_index=True,
+            )
 
     st.caption(conditions.get("注意事項", ""))
 
@@ -786,6 +863,7 @@ def show_validated_candidates_tab(results_df: pd.DataFrame):
     low20_display_columns = [
         "銘柄コード",
         "銘柄名",
+        "業種",
         "優先順位",
         "取引日",
         "終値",
@@ -824,6 +902,7 @@ def show_all_tickers_tab(
     display_columns = [
         "銘柄コード",
         "銘柄名",
+        "業種",
         "取引日",
         "終値",
         "RSI",
@@ -889,6 +968,7 @@ def analyze_all_tickers():
             continue
 
         chart_data[ticker] = analyzed_df
+        result["業種"] = get_sector(ticker)
 
         results.append(result)
 
@@ -911,6 +991,7 @@ def show_stock_tab(
     display_columns = [
         "銘柄コード",
         "銘柄名",
+        "業種",
         "取引日",
         "終値",
         "前日比",
@@ -1000,13 +1081,14 @@ else:
     japan_df = pd.DataFrame()
     us_df = pd.DataFrame()
 
-japan_tab, us_tab, backtest_tab, historical_backtest_tab, risk_backtest_tab, candidates_tab, all_tickers_tab, high_score_surge_tab = st.tabs(
+japan_tab, us_tab, backtest_tab, historical_backtest_tab, risk_backtest_tab, sector_risk_tab, candidates_tab, all_tickers_tab, high_score_surge_tab = st.tabs(
     [
         f"🇯🇵 日本株（{len(japan_df)}銘柄）",
         f"🇺🇸 米国株（{len(us_df)}銘柄）",
         "📈 バックテスト",
         "🕰️ 過去データ検証",
         "⚖️ リスク検証",
+        "🏭 業種別検証",
         "検証済み候補",
         "全銘柄確認",
         "高スコア高騰調査",
@@ -1045,6 +1127,9 @@ with risk_backtest_tab:
     show_risk_backtest_tab()
     st.divider()
     show_score_risk_tab()
+
+with sector_risk_tab:
+    show_sector_risk_tab()
 
 with high_score_surge_tab:
     show_high_score_surge_tab()
