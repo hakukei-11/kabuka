@@ -1,9 +1,11 @@
 # analysis_engine.py
 
 from datetime import datetime
+from functools import lru_cache
 from zoneinfo import ZoneInfo
 
 import pandas as pd
+import pandas_market_calendars as mcal
 import yfinance as yf
 
 from indicators import calc_macd, calc_rsi
@@ -12,6 +14,7 @@ from scoring import calc_rebound_score
 JST = ZoneInfo("Asia/Tokyo")
 THRESHOLD = 1.0
 MINIMUM_REQUIRED_ROWS = 26
+CLOSE_CONFIRMATION_DELAY = pd.Timedelta(minutes=30)
 
 
 def get_analysis_executed_at() -> str:
@@ -22,6 +25,67 @@ def get_analysis_executed_at() -> str:
 def get_trade_date(df: pd.DataFrame) -> str:
     """価格データ最終行の日付を取引日として返す。"""
     return pd.Timestamp(df.index[-1]).strftime("%Y-%m-%d")
+
+
+@lru_cache(maxsize=2)
+def get_market_calendar(calendar_name: str):
+    """日本株・米国株の営業日と取引終了時刻を取得する。"""
+    return mcal.get_calendar(calendar_name)
+
+
+@lru_cache(maxsize=32)
+def get_market_schedule(calendar_name: str, start_date: str, end_date: str) -> pd.DataFrame:
+    """同じ期間の取引日程をキャッシュし、銘柄ごとの再計算を避ける。"""
+    return get_market_calendar(calendar_name).schedule(
+        start_date=start_date, end_date=end_date, tz="UTC"
+    )
+
+
+def filter_confirmed_daily_prices(
+    df: pd.DataFrame,
+    ticker: str,
+    analysis_executed_at: str | None = None,
+) -> pd.DataFrame:
+    """取引終了から30分経った日足だけを残す。入力は変更しない。"""
+    if df.empty:
+        return df.copy()
+
+    # 対象銘柄は日本株（.T）と米国株。休場日・短縮取引・夏時間を考慮する。
+    calendar_name = "JPX" if ticker.endswith(".T") else "NYSE"
+    calendar = get_market_calendar(calendar_name)
+    reference_time = (
+        pd.Timestamp(analysis_executed_at)
+        if analysis_executed_at is not None
+        else pd.Timestamp.now(tz=JST)
+    )
+    if pd.isna(reference_time):
+        raise ValueError("分析実行日時を解釈できません。")
+    if reference_time.tzinfo is None:
+        reference_time = reference_time.tz_localize(JST)
+
+    # 一括取得のタイムゾーンなし日足indexは、市場の取引日ラベルとして扱う。
+    session_dates = pd.DatetimeIndex(df.index)
+    if session_dates.tz is not None:
+        session_dates = session_dates.tz_convert(calendar.tz).tz_localize(None)
+    session_dates = session_dates.normalize()
+    reference_date = reference_time.tz_convert(calendar.tz).tz_localize(None).normalize()
+    past_dates = session_dates[session_dates.notna() & (session_dates <= reference_date)]
+    if past_dates.empty:
+        return df.iloc[0:0].copy()
+
+    schedule = get_market_schedule(
+        calendar_name,
+        past_dates.min().strftime("%Y-%m-%d"),
+        past_dates.max().strftime("%Y-%m-%d"),
+    )
+    close_times = schedule["market_close"].reindex(session_dates)
+    confirmed = (
+        close_times + CLOSE_CONFIRMATION_DELAY <= reference_time.tz_convert("UTC")
+    ).fillna(False).to_numpy()
+    result = df.loc[confirmed].copy()
+    # 画面の一括取得と個別取得で、日付ラベルとチャートのindexを統一する。
+    result.index = session_dates[confirmed]
+    return result
 
 
 def prepare_dataframe(df: pd.DataFrame) -> pd.DataFrame | None:
@@ -139,11 +203,21 @@ def analyze_dataframe(
     取得済みの価格DataFrameを分析し、
     分析結果の辞書と指標付きDataFrameを返す。
     """
-    data = prepare_dataframe(df)
+    if df is None or df.empty:
+        return None, None
+    if analysis_executed_at is None:
+        analysis_executed_at = get_analysis_executed_at()
+    confirmed_prices = filter_confirmed_daily_prices(df, ticker, analysis_executed_at)
+    data = prepare_dataframe(confirmed_prices)
 
     if data is None:
         return None, None
 
+    # 保存用の四本値は、指標計算用の前方補完をせず同じ確定日から取得する。
+    latest_prices = confirmed_prices.dropna(subset=["Close"]).iloc[-1]
+    latest_open = latest_prices["Open"]
+    latest_high = latest_prices["High"]
+    latest_low = latest_prices["Low"]
     latest_close = float(data["Close"].iloc[-1])
     previous_close = float(data["Close"].iloc[-2])
     latest_ma = float(data["25MA"].iloc[-1])
@@ -188,14 +262,14 @@ def analyze_dataframe(
         score=score,
     )
 
-    if analysis_executed_at is None:
-        analysis_executed_at = get_analysis_executed_at()
-
     result = {
         "分析実行日時": analysis_executed_at,
         "取引日": get_trade_date(data),
         "銘柄コード": ticker,
         "銘柄名": name,
+        "始値": round(float(latest_open), 1) if pd.notna(latest_open) else None,
+        "高値": round(float(latest_high), 1) if pd.notna(latest_high) else None,
+        "安値": round(float(latest_low), 1) if pd.notna(latest_low) else None,
         "終値": round(latest_close, 1),
         "前日比": round(difference, 1),
         "前日比率(%)": round(change_rate, 2),
@@ -224,8 +298,10 @@ def analyze_ticker(
     analysis_executed_at: str | None = None,
 ) -> tuple[dict | None, pd.DataFrame | None]:
     """yfinanceから1銘柄を取得して分析する。"""
+    if analysis_executed_at is None:
+        analysis_executed_at = get_analysis_executed_at()
     try:
-        df = yf.Ticker(ticker).history(period=period)
+        df = yf.Ticker(ticker).history(period=period, interval="1d", auto_adjust=True)
     except Exception as error:
         print(f"{ticker} データ取得エラー: {error}")
         return None, None
