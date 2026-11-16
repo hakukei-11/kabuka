@@ -8,7 +8,7 @@ import pandas as pd
 import pandas_market_calendars as mcal
 import yfinance as yf
 
-from indicators import calc_macd, calc_rsi
+from indicators import calc_atr, calc_macd, calc_rsi
 from scoring import calc_rebound_score
 
 JST = ZoneInfo("Asia/Tokyo")
@@ -102,7 +102,11 @@ def prepare_dataframe(df: pd.DataFrame) -> pd.DataFrame | None:
     if len(data) < MINIMUM_REQUIRED_ROWS:
         return None
 
+    data["5MA"] = data["Close"].rolling(5).mean()
+    data["10MA"] = data["Close"].rolling(10).mean()
     data["25MA"] = data["Close"].rolling(25).mean()
+    # ATRには補完前のOHLCを使い、欠損終値の前後も直結しない。
+    data["ATR14"] = calc_atr(df["High"], df["Low"], df["Close"])
     data["High20"] = data["High"].rolling(20).max()
     data["Low20"] = data["Low"].rolling(20).min()
     data["RSI"] = calc_rsi(data["Close"])
@@ -222,6 +226,9 @@ def analyze_dataframe(
     latest_close = float(data["Close"].iloc[-1])
     previous_close = float(data["Close"].iloc[-2])
     latest_ma = float(data["25MA"].iloc[-1])
+    latest_ma5 = float(data["5MA"].iloc[-1])
+    latest_ma10 = float(data["10MA"].iloc[-1])
+    latest_atr14 = data["ATR14"].iloc[-1]
     latest_high20 = float(data["High20"].iloc[-1])
     latest_low20 = float(data["Low20"].iloc[-1])
     latest_rsi = float(data["RSI"].iloc[-1])
@@ -278,7 +285,10 @@ def analyze_dataframe(
         "RSI": round(latest_rsi, 1),
         "MACD": round(latest_macd, 3),
         "Signal": round(latest_signal, 3),
+        "5MA": round(latest_ma5, 3),
+        "10MA": round(latest_ma10, 3),
         "25MA": round(latest_ma, 1),
+        "ATR14": round(float(latest_atr14), 3) if pd.notna(latest_atr14) else None,
         "20日高値": round(latest_high20, 1),
         "20日安値": round(latest_low20, 1),
         "25MAタッチ": is_25ma_touch,
