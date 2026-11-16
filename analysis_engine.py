@@ -213,11 +213,12 @@ def analyze_dataframe(
     if data is None:
         return None, None
 
-    # 保存用の四本値は、指標計算用の前方補完をせず同じ確定日から取得する。
+    # 保存用の四本値・出来高は、前方補完せず同じ確定日から取得する。
     latest_prices = confirmed_prices.dropna(subset=["Close"]).iloc[-1]
     latest_open = latest_prices["Open"]
     latest_high = latest_prices["High"]
     latest_low = latest_prices["Low"]
+    latest_volume = latest_prices.get("Volume")
     latest_close = float(data["Close"].iloc[-1])
     previous_close = float(data["Close"].iloc[-2])
     latest_ma = float(data["25MA"].iloc[-1])
@@ -271,6 +272,7 @@ def analyze_dataframe(
         "高値": round(float(latest_high), 1) if pd.notna(latest_high) else None,
         "安値": round(float(latest_low), 1) if pd.notna(latest_low) else None,
         "終値": round(latest_close, 1),
+        "出来高": int(latest_volume) if pd.notna(latest_volume) else None,
         "前日比": round(difference, 1),
         "前日比率(%)": round(change_rate, 2),
         "RSI": round(latest_rsi, 1),

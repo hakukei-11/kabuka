@@ -132,6 +132,7 @@ def main():
         "高値",
         "安値",
         "終値",
+        "出来高",
         "前日比",
         "前日比率(%)",
         "RSI",
@@ -150,6 +151,8 @@ def main():
     ]
 
     result_df = result_df.reindex(columns=columns)
+    # 欠損は空欄、出来高0は0とし、小数点を付けずに保存する。
+    result_df["出来高"] = pd.array(result_df["出来高"], dtype="Int64")
 
     result_df.to_csv(
         file_path,
